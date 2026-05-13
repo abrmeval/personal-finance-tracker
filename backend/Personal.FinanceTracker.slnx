@@ -1,0 +1,6 @@
+<Solution>
+<Folder Name="/src/">
+<Project Name="Personal.FinanceTracker.Api" Path="src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj" />
+<Project Name="Personal.FinanceTracker.Shared" Path="src/Personal.FinanceTracker.Shared/Personal.FinanceTracker.Shared.csproj" />
+</Folder>
+</Solution>
