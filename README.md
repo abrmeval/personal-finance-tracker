@@ -1,124 +1,139 @@
-# Personal Finance Tracker 💰
+# Personal Finance Tracker
 
-> A full-stack personal finance management application built with **ASP.NET 8** and **React 18**  
+> A full-stack personal finance management application built with **ASP.NET 10** and **React 19**
 > Track expenses, manage budgets, and gain insights into your financial health.
 
-[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql)](https://neon.tech/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Project Structure](#-project-structure)
-- [Development](#-development)
-- [Deployment](#-deployment)
-- [Documentation](#-documentation)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Documentation](#documentation)
+- [License](#license)
 
 ---
 
-## ✨ Features
+## Features
 
 ### Core Functionality
-- 💳 **Transaction Management** - Track income and expenses with categories
-- 📊 **Budget Planning** - Set monthly budgets and monitor spending
-- 📈 **Financial Reports** - Visualize spending patterns and trends
-- 🏷️ **Category Management** - Organize transactions with custom categories
-- 👤 **User Authentication** - Secure JWT-based authentication
-- 🔍 **Search & Filters** - Find transactions by date, category, or amount
+- **Transaction Management** — Track income and expenses with categories
+- **Budget Planning** — Set budgets per category and monitor spending
+- **Financial Reports** — Visualize spending patterns and trends
+- **Category Management** — Organize transactions with custom categories
+- **User Authentication** — Secure JWT-based authentication with token refresh
+- **Search & Filters** — Filter transactions by date, category, type, and amount
 
-### Technical Features
-- 🎯 **Modular Monolith** - Clean architecture with module isolation
-- 🚀 **Minimal APIs** - High-performance ASP.NET 8 endpoints
-- 📱 **Responsive Design** - Mobile-first UI with Tailwind CSS
-- 🔄 **Real-time Updates** - TanStack Query for optimistic updates
-- 🧪 **Comprehensive Testing** - Unit and integration tests
-- 📊 **Observability** - OpenTelemetry integration for monitoring
-
----
-
-## 🏗️ Architecture
-
-This project follows a **Modular Monolith** architecture pattern, combining the organizational benefits of microservices with the simplicity of monolithic deployment.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Azure App Service                        │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Personal Finance Tracker API            │    │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐   │    │
-│  │  │   Finance   │ │    Users    │ │  Reporting   │   │    │
-│  │  │   Module    │ │   Module    │ │   Module     │   │    │
-│  │  └──────┬──────┘ └──────┬──────┘ └──────┬───────┘   │    │
-│  └─────────┼───────────────┼───────────────┼───────────┘    │
-└────────────┼───────────────┼───────────────┼────────────────┘
-             │               │               │
-             ▼               ▼               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Neon PostgreSQL Database                   │
-│  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐           │
-│  │ finances.*  │ │   users.*   │ │  reports.*   │           │
-│  └─────────────┘ └─────────────┘ └──────────────┘           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Module Structure
-
-Each module follows Clean Architecture principles:
-
-| Layer | Responsibility | Dependencies |
-|-------|---------------|--------------|
-| **Domain** | Business entities & rules | None |
-| **Application** | Use cases & services | Domain |
-| **Infrastructure** | Data access & external services | Domain, Application |
-| **Api** | HTTP endpoints | Application |
+### Technical Highlights
+- **Modular Monolith** — Clean Architecture with isolated modules (Finance, Users, Reporting)
+- **Minimal APIs** — High-performance ASP.NET 10 endpoints, no MVC controllers
+- **Responsive Design** — Mobile-first UI with Tailwind CSS v4
+- **Server State** — TanStack Query with query key factory pattern and optimistic updates
+- **Observability** — OpenTelemetry with OTLP export (traces, metrics, logs)
+- **Strict TypeScript** — `strict`, `verbatimModuleSyntax`, `noUnusedLocals` enforced
 
 ---
 
-## 🛠️ Tech Stack
+## Architecture
+
+This project follows a **Modular Monolith** architecture — module isolation and clean boundaries without the operational overhead of microservices.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                 Personal Finance Tracker API                  │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│   │   Finance    │  │    Users     │  │    Reporting     │   │
+│   │   Module     │  │   Module     │  │     Module       │   │
+│   └──────┬───────┘  └──────┬───────┘  └───────┬──────────┘   │
+│          │                 │                   │              │
+│   ┌──────▼─────────────────▼───────────────────▼──────────┐   │
+│   │              Personal.FinanceTracker.Shared            │   │
+│   │   ExceptionMiddleware · ValidationFilter · Entity      │   │
+│   └───────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Neon PostgreSQL                            │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│   │  finances.*  │  │   users.*    │  │   reporting.*    │   │
+│   └──────────────┘  └──────────────┘  └──────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Clean Architecture Layers
+
+Each module follows a strict dependency rule — dependencies point inward only:
+
+| Layer | Responsibility | Depends On |
+|-------|---------------|------------|
+| **Domain** | Entities, value objects, domain rules | Nothing |
+| **Application** | Use cases, service interfaces, validators | Domain |
+| **Infrastructure** | EF Core repos, external services | Domain, Application |
+| **Api** | Minimal API endpoints, DI registration | Application |
+
+---
+
+## Tech Stack
 
 ### Backend
-- **Framework**: ASP.NET 8 with Minimal APIs
-- **Database**: Neon PostgreSQL (serverless)
-- **ORM**: Entity Framework Core 8
-- **Validation**: FluentValidation
-- **Authentication**: JWT Bearer tokens
-- **Background Jobs**: TickerQ
-- **Testing**: xUnit, TestContainers
+| Package | Version | Purpose |
+|---------|---------|---------|
+| ASP.NET 10 Minimal APIs | 10.0 | HTTP host, no MVC controllers |
+| Entity Framework Core | 10.0 | ORM |
+| Npgsql EF Core Provider | 10.0 | PostgreSQL driver |
+| FluentValidation | 12.1 | Request validation via `ValidationFilter<T>` |
+| Microsoft.AspNetCore.Authentication.JwtBearer | 10.0 | JWT authentication |
+| Swashbuckle.AspNetCore | 10.1 | OpenAPI / Swagger UI |
+| OpenTelemetry | 1.15 | Traces, metrics, logs (OTLP export) |
+| AspNetCore.HealthChecks.NpgSql | 9.0 | PostgreSQL health check endpoint |
+| xUnit + TestContainers | — | Unit and integration testing |
+| TickerQ | — | Cron-based background jobs |
 
 ### Frontend
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **State Management**: TanStack Query (React Query)
-- **Forms**: React Hook Form + Zod
-- **Charts**: Chart.js
-- **Routing**: React Router v6
+| Package | Version | Purpose |
+|---------|---------|---------|
+| React | 19 | UI framework |
+| TypeScript | 5.9 | Type safety (`strict` mode) |
+| Vite | 7 | Build tool and dev server |
+| Tailwind CSS | v4 (Vite plugin) | Utility-first styling |
+| TanStack Query | latest | Server state management |
+| React Hook Form + Zod | latest | Form handling and validation |
+| React Router DOM | v6 | Client-side routing |
+| Axios | latest | HTTP client with 401/refresh interceptor |
+| Recharts / Chart.js | latest | Data visualization |
+| Lucide React | latest | Icons |
+| date-fns | latest | Date utilities |
+| clsx + tailwind-merge | latest | Conditional class composition |
 
-### DevOps & Infrastructure
-- **Hosting**: Azure App Service + Azure Static Web Apps
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Azure Application Insights + OpenTelemetry
-- **Secrets**: Azure Key Vault
+### Infrastructure
+| Component | Technology |
+|-----------|-----------|
+| Database | Neon PostgreSQL (serverless) |
+| CI/CD | GitHub Actions |
+| Observability | OpenTelemetry (OTLP) |
+| Secrets (local) | .NET User Secrets |
+| Secrets (production) | Environment variables |
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 20+](https://nodejs.org/)
-- [Docker](https://www.docker.com/) (for local database)
-- [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) (for deployment)
+- [Docker](https://www.docker.com/) (for local PostgreSQL)
 
 ### Local Development Setup
 
@@ -128,268 +143,182 @@ Each module follows Clean Architecture principles:
    cd personal-finance-tracker
    ```
 
-2. **Set up local database**
+2. **Start a local PostgreSQL instance**
    ```bash
    docker run -d --name finance-db \
-     -e POSTGRES_USER=finance \
-     -e POSTGRES_PASSWORD=localdev \
-     -e POSTGRES_DB=financetracker \
+     -e POSTGRES_PASSWORD=postgres \
      -p 5432:5432 \
      postgres:16
    ```
 
-3. **Configure backend**
+3. **Configure backend secrets** (never committed to git)
    ```bash
-   cd backend/src/Personal.FinanceTracker.Api
-   
-   # Update appsettings.Development.json with your connection string
-   dotnet user-secrets set "ConnectionStrings:FinanceDb" "Host=localhost;Port=5432;Database=financetracker;Username=finance;Password=localdev"
+   dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
+     "Host=localhost;Port=5432;Database=finance_tracker_dev;Username=postgres;Password=postgres" \
+     --project backend/src/Personal.FinanceTracker.Api
+
+   dotnet user-secrets set "Jwt:SecretKey" \
+     "your-local-secret-key-minimum-32-characters" \
+     --project backend/src/Personal.FinanceTracker.Api
    ```
 
-4. **Run database migrations**
+4. **Build and run the API**
    ```bash
-   # From backend directory
-   dotnet ef database update --project src/Modules/Finance
-   dotnet ef database update --project src/Modules/Users
-   dotnet ef database update --project src/Modules/Reporting
+   dotnet build backend/
+   dotnet run --project backend/src/Personal.FinanceTracker.Api
+   # API: http://localhost:5194
+   # Swagger UI: http://localhost:5194/swagger
+   # Health: http://localhost:5194/health/live
    ```
 
-5. **Start the API**
+5. **Install frontend dependencies**
    ```bash
-   dotnet run --project src/Personal.FinanceTracker.Api
-   # API will run at https://localhost:5001
-   ```
-
-6. **Set up frontend**
-   ```bash
-   cd ../../frontend
+   cd frontend
    npm install
-   
-   # Create .env.local
-   echo "VITE_API_URL=https://localhost:5001" > .env.local
    ```
 
-7. **Start the frontend**
+6. **Start the frontend**
    ```bash
    npm run dev
-   # Frontend will run at http://localhost:5173
+   # Frontend: http://localhost:5173
+   # Proxies /api/* → http://localhost:5194
    ```
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 personal-finance-tracker/
 │
-├── 📁 backend/                          # .NET Backend
-│   ├── 📄 Personal.FinanceTracker.sln   # Solution file
-│   ├── 📄 Directory.Build.props         # Shared build properties
+├── backend/
+│   ├── Personal.FinanceTracker.sln
+│   ├── Directory.Build.props              # net10.0, TreatWarningsAsErrors, analyzers
 │   │
-│   ├── 📁 src/
-│   │   ├── 📁 Personal.FinanceTracker.Api/      # API Host
-│   │   ├── 📁 Personal.FinanceTracker.Shared/   # Shared Kernel
-│   │   └── 📁 Modules/                          # Feature Modules
-│   │       ├── 📁 Finance/              # Finance module (transactions, budgets)
-│   │       ├── 📁 Users/                # Users module (auth, profiles)
-│   │       └── 📁 Reporting/            # Reporting module (analytics)
-│   │
-│   └── 📁 tests/                        # Test Projects
-│       ├── 📁 Finance.UnitTests/
-│       ├── 📁 Finance.IntegrationTests/
-│       └── 📁 Api.IntegrationTests/
+│   └── src/
+│       ├── Personal.FinanceTracker.Api/   # ASP.NET 10 host, Program.cs, middleware pipeline
+│       ├── Personal.FinanceTracker.Shared/ # Shared kernel
+│       │   ├── Abstractions/Entity.cs
+│       │   ├── Exceptions/NotFoundException.cs
+│       │   ├── Middleware/ExceptionHandlingMiddleware.cs
+│       │   └── Filters/ValidationFilter.cs
+│       └── Modules/                       # Feature modules (Sprint 1+)
+│           ├── Finance/                   # Transactions, Categories, Budgets
+│           ├── Users/                     # Authentication, profiles
+│           └── Reporting/                 # Dashboard, analytics
 │
-├── 📁 frontend/                         # React Frontend
-│   ├── 📁 src/
-│   │   ├── 📁 api/                      # API client
-│   │   ├── 📁 components/               # Reusable components
-│   │   ├── 📁 features/                 # Feature-specific components
-│   │   ├── 📁 hooks/                    # Custom React hooks
-│   │   └── 📁 types/                    # TypeScript types
-│   ├── 📄 package.json
-│   └── 📄 vite.config.ts
+├── frontend/
+│   └── src/
+│       ├── api/                           # Axios client + per-resource API modules
+│       ├── components/                    # Shared UI (ui/, layout/, forms/, charts/)
+│       ├── features/                      # Feature pages (dashboard/, transactions/, ...)
+│       ├── hooks/                         # Custom React hooks (TanStack Query)
+│       ├── types/                         # TypeScript types mirroring backend DTOs
+│       └── utils/                         # Formatters, date helpers, Zod schemas
 │
-├── 📁 .github/workflows/                # CI/CD Pipelines
-│   ├── 📄 api-deploy.yml
-│   ├── 📄 frontend-deploy.yml
-│   └── 📄 ci-checks.yml
+├── docs/
+│   ├── 01-Project-Structure.md
+│   ├── 02-Backend-Documentation.md
+│   ├── 03-Frontend-Documentation.md
+│   ├── 04-DevOps-Deployment.md
+│   ├── 05-Infrastructure.md
+│   ├── 06-Local-Development.md
+│   └── ai/
+│       ├── ui-design-rules.md
+│       └── sprints/                       # Sprint plans and execution docs
 │
-├── 📁 docs/                             # Detailed Documentation
-│   ├── 📄 01-Project-Structure.md       # Architecture overview
-│   ├── 📄 02-Backend-Documentation.md   # Backend details
-│   ├── 📄 03-Frontend-Documentation.md  # Frontend details
-│   ├── 📄 04-DevOps-Deployment.md       # Deployment guide
-│   └── 📄 05-Infrastructure.md          # Infrastructure setup
-│
-├── 📄 .gitignore
-├── 📄 LICENSE
-└── 📄 README.md
+└── README.md
 ```
 
 ---
 
-## 💻 Development
+## Development
 
 ### Backend Commands
 
 ```bash
 # Build solution
-dotnet build
-
-# Run tests
-dotnet test
+dotnet build backend/
 
 # Run API
-dotnet run --project src/Personal.FinanceTracker.Api
+dotnet run --project backend/src/Personal.FinanceTracker.Api
 
-# Create migration (example for Finance module)
-dotnet ef migrations add InitialCreate --project src/Modules/Finance
+# Run all tests
+dotnet test backend/
 
-# Update database
-dotnet ef database update --project src/Modules/Finance
+# Run a specific test project
+dotnet test backend/tests/Finance.UnitTests
+
+# Run tests with coverage
+dotnet test backend/ --collect:"XPlat Code Coverage"
 
 # Format code
-dotnet format
+dotnet format backend/
+
+# Add a migration (once Finance module exists)
+dotnet ef migrations add <MigrationName> \
+  --context FinanceDbContext \
+  --project backend/src/Modules/Finance \
+  --startup-project backend/src/Personal.FinanceTracker.Api
+
+# Apply migrations
+dotnet ef database update \
+  --context FinanceDbContext \
+  --startup-project backend/src/Personal.FinanceTracker.Api
 ```
 
 ### Frontend Commands
 
 ```bash
+cd frontend
+
 # Install dependencies
 npm install
 
-# Start dev server
+# Start dev server (http://localhost:5173)
 npm run dev
 
-# Build for production
+# Type-check and build for production
 npm run build
 
 # Preview production build
 npm run preview
 
-# Run linting
+# Lint
 npm run lint
 
-# Run type checking
-npm run type-check
-```
-
-### Testing
-
-```bash
-# Backend - Run all tests
-dotnet test
-
-# Backend - Run specific test project
-dotnet test tests/Finance.UnitTests
-
-# Backend - Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
-
-# Frontend - Run tests
+# Run tests (Vitest)
 npm test
 
-# Frontend - Run with coverage
+# Run tests with coverage
 npm run test:coverage
 ```
 
 ---
 
-## 🚢 Deployment
+## Documentation
 
-### Azure Deployment
-
-The application is deployed to Azure using GitHub Actions:
-
-- **API**: Azure App Service (Linux)
-- **Frontend**: Azure Static Web Apps
-- **Database**: Neon PostgreSQL (external)
-
-### Deployment Workflow
-
-1. Push to `main` branch triggers CI/CD
-2. Backend is built and tested
-3. Frontend is built and optimized
-4. API is deployed to Azure App Service
-5. Frontend is deployed to Azure Static Web Apps
-
-### Manual Deployment
-
-```bash
-# Deploy API
-az webapp up \
-  --name api-finance-tracker \
-  --resource-group rg-finance-tracker \
-  --runtime "DOTNETCORE:8.0"
-
-# Deploy Frontend
-cd frontend
-npm run build
-az staticwebapp deploy \
-  --name frontend-finance-tracker \
-  --resource-group rg-finance-tracker
-```
-
-For detailed deployment instructions, see [04-DevOps-Deployment.md](docs/04-DevOps-Deployment.md).
-
----
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the `docs/` folder:
+All documentation lives in `docs/`:
 
 | Document | Description |
 |----------|-------------|
-| [01-Project-Structure.md](docs/01-Project-Structure.md) | Architecture and project organization |
-| [02-Backend-Documentation.md](docs/02-Backend-Documentation.md) | Backend implementation details |
-| [03-Frontend-Documentation.md](docs/03-Frontend-Documentation.md) | Frontend implementation details |
-| [04-DevOps-Deployment.md](docs/04-DevOps-Deployment.md) | CI/CD and deployment guide |
-| [05-Infrastructure.md](docs/05-Infrastructure.md) | Database and infrastructure setup |
+| [01-Project-Structure.md](docs/01-Project-Structure.md) | Monorepo layout and module organization |
+| [02-Backend-Documentation.md](docs/02-Backend-Documentation.md) | Clean Architecture, EF Core, Minimal APIs, FluentValidation |
+| [03-Frontend-Documentation.md](docs/03-Frontend-Documentation.md) | React patterns, TanStack Query, forms, chart components |
+| [04-DevOps-Deployment.md](docs/04-DevOps-Deployment.md) | GitHub Actions CI/CD, environment configuration |
+| [05-Infrastructure.md](docs/05-Infrastructure.md) | Neon PostgreSQL, environment variables, secrets |
+| [06-Local-Development.md](docs/06-Local-Development.md) | Local setup, running the stack, migrations |
+| [ai/ui-design-rules.md](docs/ai/ui-design-rules.md) | UI component conventions and Tailwind patterns |
+| [AGENTS.md](AGENTS.md) | Coding standards, naming conventions, architecture rules |
 
 ---
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Coding Standards
-
-- Follow C# coding conventions for backend
-- Use ESLint and Prettier for frontend
-- Write unit tests for new features
-- Update documentation as needed
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👤 Author
-
-**abrmeval**
-- GitHub: [@abrmeval](https://github.com/abrmeval)
-
----
-
-## 🙏 Acknowledgments
-
-- [ASP.NET Core](https://docs.microsoft.com/aspnet/core/) - Backend framework
-- [React](https://react.dev/) - Frontend library
-- [Neon](https://neon.tech/) - Serverless PostgreSQL
-- [Azure](https://azure.microsoft.com/) - Cloud hosting
-- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ using .NET and React</p>
+  <p>Built with .NET 10 and React 19</p>
 </div>
