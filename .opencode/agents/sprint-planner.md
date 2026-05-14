@@ -15,7 +15,7 @@ description: |
   - User says 'I need to create a sprint plan for the authentication feature' → invoke this agent to structure sprint with tasks and deadlines
   - User asks 'Can you help me organize the tasks for next week's sprint?' → invoke this agent to create organized sprint with clear task breakdown
   - User says 'Update the status of my sprint tasks to reflect current progress' → invoke this agent to update task statuses and provide progress summary
-model: github-copilot/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-4.6
 permission:
   read: allow
   edit: allow
