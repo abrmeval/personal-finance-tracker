@@ -40,7 +40,8 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message
+            Detail = exception.Message,
+            Instance = context.Request.Path
         };
 
         context.Response.StatusCode = statusCode;

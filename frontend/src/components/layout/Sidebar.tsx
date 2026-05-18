@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 
-const navItems = [
+const NAV_ITEMS = [
   { to: '/',             label: 'Dashboard' },
   { to: '/transactions', label: 'Transactions' },
   { to: '/categories',   label: 'Categories' },
@@ -10,10 +10,10 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="w-64 bg-gray-900 text-white h-screen flex flex-col p-4">
+    <aside className="w-64 bg-gray-900 text-white h-[100dvh] flex flex-col p-4">
       <h1 className="text-xl font-bold mb-8">Finance Tracker</h1>
       <nav className="flex flex-col gap-1">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

@@ -25,7 +25,7 @@ permission:
   write: deny
   bash: deny
   task: deny
-  webfetch: deny
+  webfetch: allow
 ---
 
 # designer-enforcer instructions

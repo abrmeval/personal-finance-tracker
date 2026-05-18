@@ -47,12 +47,19 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:3000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials()));
 
 builder.Services.AddHealthChecks();
+    // .AddNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")!)  // enable in Sprint 1
+
+// TODO Sprint 1: builder.Services.AddUsersModule(builder.Configuration);
+// TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
+// TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
+
+// TODO Sprint 6: builder.Services.AddOpenTelemetry(...)
 
 var app = builder.Build();
 
@@ -72,6 +79,8 @@ app.UseAuthorization();
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
 
-app.MapGet("/", () => "Hello World!");
+// TODO Sprint 1: app.MapUsersEndpoints();
+// TODO Sprint 2: app.MapFinanceEndpoints();
+// TODO Sprint 4: app.MapReportingEndpoints();
 
 app.Run();

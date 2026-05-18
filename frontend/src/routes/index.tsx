@@ -1,5 +1,5 @@
-import { MainLayout } from "@/components/layout/MainLayout";
-import { NotFoundPage } from "@/pages/NotFoundPage";
+import { MainLayout } from "@/components/layout/MainLayout.tsx";
+import { NotFoundPage } from "@/pages/NotFoundPage.tsx";
 import { createBrowserRouter } from "react-router-dom";
 
 
