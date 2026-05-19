@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:18.4
+    container_name: finance-tracker-psql
+    restart: always
+      # set shared memory limit when using docker compose
+    shm_size: 128mb
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    ports:
+      - "5432:5432"
+    volumes:
+      - finance_tracker_postgres_data:/var/lib/postgresql
+volumes:
+  finance_tracker_postgres_data:

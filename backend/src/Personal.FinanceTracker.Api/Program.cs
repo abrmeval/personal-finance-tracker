@@ -1,11 +1,17 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Personal.FinanceTracker.Shared.Middleware;
+using Personal.FinanceTracker.Users.Infrastructure.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
 // ── Services ───────────────────────────────────────────────────
 
+// Temporary — will be replaced by AddUsersModule in Task 15
+builder.Services.AddDbContext<UsersDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -63,6 +69,7 @@ builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
+// Custom exception handling middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
