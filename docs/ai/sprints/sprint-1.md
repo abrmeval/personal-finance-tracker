@@ -2203,6 +2203,16 @@ Update `src/components/layout/Header.tsx` to show the logged-in user's first nam
 
 ---
 
+## Aditional steps added by Me:
+- Make use of the ioptions páttern
+- Create an abstraction to return a respopnse to the client in the same formart for all endpoints
+- Create an abstraction for services response 
+- Create an abstraction for repositories response
+- Verify project structure
+
+# Progress:
+- Until Task 14 Done
+
 ## Definition of Done
 
 This sprint is complete when:
