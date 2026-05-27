@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Personal.FinanceTracker.Shared.Middleware;
+using Personal.FinanceTracker.Users;
 using Personal.FinanceTracker.Users.Infrastructure.Data;
 
 
@@ -61,7 +62,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
     // .AddNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")!)  // enable in Sprint 1
 
-// TODO Sprint 1: builder.Services.AddUsersModule(builder.Configuration);
+ builder.Services.AddUsersModule(builder.Configuration);
 // TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
 // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
 
@@ -86,7 +87,8 @@ app.UseAuthorization();
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
 
-// TODO Sprint 1: app.MapUsersEndpoints();
+app.MapUsersEndpoints();
+// TODO Sprint 1: builder.Services.AddUsersModule(builder.Configuration);
 // TODO Sprint 2: app.MapFinanceEndpoints();
 // TODO Sprint 4: app.MapReportingEndpoints();
 

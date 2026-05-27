@@ -30,7 +30,7 @@ Sprint 1 builds the Users module end-to-end: domain entity, repository, JWT toke
 - `AuthEndpoints` Minimal API endpoints: register, login, refresh, revoke
 - `ClaimsPrincipalExtensions` in the Shared project
 - `UsersModule.cs` registration — `AddUsersModule` + `MapUsersEndpoints`; wire into `Program.cs`
-- Frontend: `src/types/auth.ts`, `src/api/client.ts`, `src/api/auth.ts`
+- Frontend: `src/types/auth.ts`, `src/api/client.ts` (fetch-based wrapper), `src/api/auth.ts`
 - Frontend: `AuthContext`, `useAuth` hook
 - Frontend: `LoginPage`, `RegisterPage` (React Hook Form + Zod)
 - Frontend: `ProtectedRoute` component
@@ -1337,118 +1337,126 @@ Create the TypeScript type definitions that mirror the backend DTOs exactly. All
 
 ---
 
-### Task 17 — Frontend: Axios Client with Auth Interceptors
+### Task 17 — Frontend: Fetch-based API Client
 
 **Status:** New
 
 **Description:**
-Create `src/api/client.ts` — the single Axios instance used by every API module. The request interceptor attaches the Bearer token from `localStorage`. The response interceptor handles 401 by attempting a token refresh, retrying the original request once, then redirecting to `/login` on failure.
+Create `src/api/client.ts` — a lightweight, typed wrapper around the native `fetch` API. It attaches the `Authorization: Bearer` header from `localStorage` on every request, handles 401 responses by attempting a token refresh (with a queue for concurrent 401s), and redirects to `/login` on refresh failure. No external HTTP library is used.
 
 **Steps:**
 
 1. Create `frontend/src/api/client.ts`:
    ```typescript
-   import axios from 'axios';
    import type { AuthResponse } from '@/types/auth';
 
    const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
-   export const apiClient = axios.create({
-     baseURL: BASE_URL,
-     headers: { 'Content-Type': 'application/json' },
-   });
-
-   apiClient.interceptors.request.use((config) => {
-     const token = localStorage.getItem('accessToken');
-     if (token) {
-       config.headers.Authorization = `Bearer ${token}`;
+   export class ApiError extends Error {
+     constructor(
+       public readonly status: number,
+       message: string,
+     ) {
+       super(message);
+       this.name = 'ApiError';
      }
-     return config;
-   });
-
-   let isRefreshing = false;
-   let failedQueue: Array<{
-     resolve: (value: string) => void;
-     reject: (reason: unknown) => void;
-   }> = [];
-
-   function processQueue(error: unknown, token: string | null) {
-     failedQueue.forEach((p) => {
-       if (error) {
-         p.reject(error);
-       } else {
-         p.resolve(token!);
-       }
-     });
-     failedQueue = [];
    }
 
-   apiClient.interceptors.response.use(
-     (response) => response,
-     async (error: unknown) => {
-       if (!axios.isAxiosError(error)) return Promise.reject(error);
+   let isRefreshing = false;
+   let refreshPromise: Promise<string> | null = null;
 
-       const originalRequest = error.config as typeof error.config & { _retry?: boolean };
+   async function refreshAccessToken(): Promise<string> {
+     const storedRefreshToken = localStorage.getItem('refreshToken');
 
-       if (error.response?.status !== 401 || originalRequest?._retry) {
-         return Promise.reject(error);
-       }
+     if (!storedRefreshToken) {
+       throw new ApiError(401, 'No refresh token available.');
+     }
 
-       if (isRefreshing) {
-         return new Promise<string>((resolve, reject) => {
-           failedQueue.push({ resolve, reject });
-         })
-           .then((token) => {
-             if (originalRequest) {
-               originalRequest.headers = originalRequest.headers ?? {};
-               originalRequest.headers['Authorization'] = `Bearer ${token}`;
-             }
-             return apiClient(originalRequest!);
-           })
-           .catch((err: unknown) => Promise.reject(err));
-       }
+     const response = await fetch(`${BASE_URL}/auth/refresh`, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ refreshToken: storedRefreshToken }),
+     });
 
-       originalRequest._retry = true;
-       isRefreshing = true;
+     if (!response.ok) {
+       throw new ApiError(response.status, 'Token refresh failed.');
+     }
 
-       const storedRefreshToken = localStorage.getItem('refreshToken');
+     const data = (await response.json()) as AuthResponse;
+     localStorage.setItem('accessToken', data.accessToken);
+     localStorage.setItem('refreshToken', data.refreshToken);
+     return data.accessToken;
+   }
 
-       if (!storedRefreshToken) {
-         isRefreshing = false;
-         localStorage.removeItem('accessToken');
-         localStorage.removeItem('refreshToken');
-         window.location.href = '/login';
-         return Promise.reject(error);
+   async function getValidAccessToken(): Promise<string | null> {
+     const token = localStorage.getItem('accessToken');
+     return token;
+   }
+
+   async function request<T>(
+     path: string,
+     options: RequestInit = {},
+     retry = true,
+   ): Promise<T> {
+     const token = await getValidAccessToken();
+
+     const headers: Record<string, string> = {
+       'Content-Type': 'application/json',
+       ...(options.headers as Record<string, string>),
+     };
+
+     if (token) {
+       headers['Authorization'] = `Bearer ${token}`;
+     }
+
+     const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+     if (response.status === 401 && retry) {
+       // Deduplicate concurrent refresh calls
+       if (!isRefreshing) {
+         isRefreshing = true;
+         refreshPromise = refreshAccessToken().finally(() => {
+           isRefreshing = false;
+           refreshPromise = null;
+         });
        }
 
        try {
-         const response = await axios.post<AuthResponse>(`${BASE_URL}/auth/refresh`, {
-           refreshToken: storedRefreshToken,
-         });
+         const newToken = await refreshPromise!;
+         headers['Authorization'] = `Bearer ${newToken}`;
+         const retried = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-         const { accessToken, refreshToken } = response.data;
-         localStorage.setItem('accessToken', accessToken);
-         localStorage.setItem('refreshToken', refreshToken);
-
-         processQueue(null, accessToken);
-
-         if (originalRequest) {
-           originalRequest.headers = originalRequest.headers ?? {};
-           originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+         if (!retried.ok) {
+           throw new ApiError(retried.status, await retried.text());
          }
 
-         return apiClient(originalRequest!);
-       } catch (refreshError) {
-         processQueue(refreshError, null);
+         return retried.status === 204 ? (undefined as T) : ((await retried.json()) as T);
+       } catch {
          localStorage.removeItem('accessToken');
          localStorage.removeItem('refreshToken');
+         localStorage.removeItem('user');
          window.location.href = '/login';
-         return Promise.reject(refreshError);
-       } finally {
-         isRefreshing = false;
+         throw new ApiError(401, 'Session expired.');
        }
-     },
-   );
+     }
+
+     if (!response.ok) {
+       throw new ApiError(response.status, await response.text());
+     }
+
+     return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+   }
+
+   export const apiClient = {
+     get: <T>(path: string) => request<T>(path, { method: 'GET' }),
+     post: <T>(path: string, body?: unknown) =>
+       request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+     put: <T>(path: string, body?: unknown) =>
+       request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+     patch: <T>(path: string, body?: unknown) =>
+       request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+     delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+   };
    ```
 
 2. Create `frontend/.env.example`:
@@ -1459,9 +1467,11 @@ Create `src/api/client.ts` — the single Axios instance used by every API modul
 3. Run `npm run build` — confirm 0 TypeScript errors.
 
 **Success Criteria:**
-- Single Axios instance exported from `client.ts`
-- Concurrent 401 responses are queued and retried once after token refresh
-- On refresh failure, tokens are cleared and user is redirected to `/login`
+- No `axios` import anywhere in `client.ts` — uses the native `fetch` API only
+- `apiClient` exports typed `get`, `post`, `put`, `patch`, `delete` helpers
+- Concurrent 401 responses share a single refresh call via `refreshPromise` deduplication
+- On refresh failure, tokens and user are cleared from `localStorage` and the user is redirected to `/login`
+- `ApiError` carries the HTTP status code for consumers to branch on
 
 ---
 
@@ -1470,7 +1480,7 @@ Create `src/api/client.ts` — the single Axios instance used by every API modul
 **Status:** New
 
 **Description:**
-Create `src/api/auth.ts` — the `authApi` object with fully typed functions for all four auth endpoints.
+Create `src/api/auth.ts` — the `authApi` object with fully typed functions for all four auth endpoints. Uses `apiClient` from `@/api/client` exclusively — no direct `fetch` calls.
 
 **Steps:**
 
@@ -1480,24 +1490,17 @@ Create `src/api/auth.ts` — the `authApi` object with fully typed functions for
    import { apiClient } from '@/api/client';
 
    export const authApi = {
-     login: async (data: LoginRequest): Promise<AuthResponse> => {
-       const response = await apiClient.post<AuthResponse>('/auth/login', data);
-       return response.data;
-     },
+     login: (data: LoginRequest): Promise<AuthResponse> =>
+       apiClient.post<AuthResponse>('/auth/login', data),
 
-     register: async (data: RegisterRequest): Promise<AuthResponse> => {
-       const response = await apiClient.post<AuthResponse>('/auth/register', data);
-       return response.data;
-     },
+     register: (data: RegisterRequest): Promise<AuthResponse> =>
+       apiClient.post<AuthResponse>('/auth/register', data),
 
-     refresh: async (data: RefreshTokenRequest): Promise<AuthResponse> => {
-       const response = await apiClient.post<AuthResponse>('/auth/refresh', data);
-       return response.data;
-     },
+     refresh: (data: RefreshTokenRequest): Promise<AuthResponse> =>
+       apiClient.post<AuthResponse>('/auth/refresh', data),
 
-     revoke: async (data: RefreshTokenRequest): Promise<void> => {
-       await apiClient.post('/auth/revoke', data);
-     },
+     revoke: (data: RefreshTokenRequest): Promise<void> =>
+       apiClient.post<void>('/auth/revoke', data),
    };
    ```
 
@@ -1505,7 +1508,8 @@ Create `src/api/auth.ts` — the `authApi` object with fully typed functions for
 
 **Success Criteria:**
 - All four functions typed with request/response types from `src/types/auth.ts`
-- Uses `apiClient` from `@/api/client` — no direct `axios` imports
+- Uses `apiClient` from `@/api/client` — no direct `fetch` or `axios` imports
+- No `any` types
 
 ---
 
@@ -2198,7 +2202,7 @@ Update `src/components/layout/Header.tsx` to show the logged-in user's first nam
 
 **Success Criteria:**
 - Logged-in user's full name visible in the header
-- Sign out button calls `logout()` and redirects to `/login` (via the interceptor clearing tokens and the `ProtectedRoute` redirecting)
+- Sign out button calls `logout()` which revokes the refresh token, clears localStorage, and the `ProtectedRoute` then redirects to `/login`
 - Icons use Lucide React — no other icon library
 
 ---
@@ -2209,6 +2213,9 @@ Update `src/components/layout/Header.tsx` to show the logged-in user's first nam
 - Create an abstraction for services response 
 - Create an abstraction for repositories response
 - Verify project structure
+- show validation errros form server
+- Modify ApiError class as  the same format of ProblemDetails object from server
+- Modify middleware to return same format response
 
 # Progress:
 - Until Task 14 Done
@@ -2239,9 +2246,10 @@ This sprint is complete when:
 - [ ] Refreshing the browser while logged in does not log the user out
 - [ ] The Header shows the logged-in user's name and a Sign out button
 - [ ] Clicking Sign out clears tokens, calls `/api/auth/revoke`, and redirects to `/login`
+- [ ] `src/api/client.ts` uses the native `fetch` API — no `axios` dependency
 - [ ] All 26 tasks are in **Done** status
 - [ ] `designer-enforcer` agent has been invoked and its report is clean
 
 ---
 
-*Last updated: 18/05/2026*
+*Last updated: 25/05/2026*
