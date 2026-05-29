@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/useAuth";
 import { registerSchema } from "@/features/auth/schemas";
 import type { RegisterFormData } from "@/features/auth/schemas";
+import { ApiError, AppStatusCode } from "@/types/http";
+import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
 
 export function RegisterPage() {
   const { register: registerUser, isAuthenticated } = useAuth();
@@ -14,7 +16,7 @@ export function RegisterPage() {
   useEffect(() => {
     if (isAuthenticated) navigate("/", { replace: true });
   }, [isAuthenticated, navigate]);
-  
+
   const {
     register,
     handleSubmit,
@@ -33,10 +35,19 @@ export function RegisterPage() {
         lastName: data.lastName,
       });
       navigate("/", { replace: true });
-    } catch {
-      setServerError(
-        "This email address is already registered. Please sign in instead.",
-      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setServerError(error.title);
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error during registration",
+          error: error instanceof Error ? error : String(error),
+          context: "[onSubmit]",
+          path: "/auth/register",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setServerError("An unexpected error occurred. Please try again.");
+      }
     }
   }
   return (

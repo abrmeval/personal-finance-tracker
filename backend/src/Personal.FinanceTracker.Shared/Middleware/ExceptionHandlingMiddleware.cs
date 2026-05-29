@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Personal.FinanceTracker.Shared.Exceptions;
+using Personal.FinanceTracker.Shared.Models;
 
 namespace Personal.FinanceTracker.Shared.Middleware;
 
@@ -36,8 +37,9 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
             _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
         };
 
-        var problemDetails = new ProblemDetails
+        var apiError = new ApiError
         {
+            Type = exception.GetType().Name,
             Status = statusCode,
             Title = title,
             Detail = exception.Message,
@@ -46,6 +48,12 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(problemDetails);
+        await context.Response.WriteAsJsonAsync(new ApiResponse<object>
+        {
+            IsOk = false,
+            Error = apiError,
+            StatusCode = statusCode,
+            CodeText = title
+        });
     }
 }

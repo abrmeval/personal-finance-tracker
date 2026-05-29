@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenv -e .env vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && dotenv -e .env vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "serve": "npm run build && npm run preview"

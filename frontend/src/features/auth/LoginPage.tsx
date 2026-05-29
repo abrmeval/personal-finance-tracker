@@ -32,7 +32,7 @@ export function LoginPage() {
       navigate("/", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setServerError(error.message);
+        setServerError(error.title);
       } else {
         ClientLogger.LogError({
           message: "Unexpected error during login",

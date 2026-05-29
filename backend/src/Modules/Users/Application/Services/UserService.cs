@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Personal.FinanceTracker.Users.Application.DTOs.Requests;
 using Personal.FinanceTracker.Users.Application.DTOs.Responses;
 using Personal.FinanceTracker.Users.Domain.Entities;
@@ -9,9 +10,11 @@ namespace Personal.FinanceTracker.Users.Application.Interfaces;
 public sealed class UserService(
     IUserRepository repository,
     ITokenService tokenService,
-    IConfiguration configuration,
+    IJwtSettings jwtSettings,
     ILogger<UserService> logger) : IUserService
 {
+    private readonly IJwtSettings _jwtSettings = jwtSettings;
+
     public async Task<AuthResponse?> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
     {
         if (await repository.EmailExistsAsync(request.Email, ct))
@@ -33,6 +36,7 @@ public sealed class UserService(
         logger.LogInformation("User {UserId} registered successfully", user.Id);
         return BuildAuthResponse(user, refreshTokenValue);
     }
+    
     public async Task<AuthResponse?> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
         var user = await repository.GetByEmailAsync(request.Email, ct);
@@ -95,7 +99,7 @@ public sealed class UserService(
     private AuthResponse BuildAuthResponse(User user, string refreshTokenValue)
     {
         var accessToken = tokenService.GenerateAccessToken(user);
-        var expiryMinutes = int.Parse(configuration["Jwt:ExpiryMinutes"] ?? "60");
+        var expiryMinutes = _jwtSettings.ExpiryMinutes;
 
         return new AuthResponse(
             AccessToken: accessToken,
@@ -106,7 +110,6 @@ public sealed class UserService(
 
     private DateTime GetRefreshTokenExpiry()
     {
-        var days = int.Parse(configuration["Jwt:RefreshTokenExpiryDays"] ?? "7");
-        return DateTime.UtcNow.AddDays(days);
+        return DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenExpiryDays);
     }
 }

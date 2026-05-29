@@ -11,7 +11,13 @@ async function refreshAccessToken(): Promise<string> {
   const storedRefreshToken = localStorage.getItem("refreshToken");
 
   if (!storedRefreshToken) {
-    throw new ApiError("No refresh token available.", "[refreshAccessToken]");
+    throw new ApiError(
+      "No refresh token available.",
+      "No refresh token available.",
+      "[refreshAccessToken]",
+      "/auth/refresh",
+      AppStatusCode.ClientError,
+    );
   }
 
   const response = await fetch(`${BASE_URL}/auth/refresh`, {
@@ -22,7 +28,8 @@ async function refreshAccessToken(): Promise<string> {
 
   if (!response.ok) {
     throw new ApiError(
-      "Token refresh failed: " + response.statusText,
+      "Token refresh failed",
+      response.statusText,
       "[refreshAccessToken]",
       "/auth/refresh",
       response.status,
@@ -57,8 +64,8 @@ async function parseResponse<T>(
     responseBody = (await response.json()) as ApiResponse<T>;
   } catch (error) {
     throw new ApiError(
-      "Parsing error:" +
-        (error instanceof Error ? error.message : String(error)),
+      "Parsing error",
+      error instanceof Error ? error.message : String(error),
       "[parseResponse]",
       path,
       AppStatusCode.ParseError,
@@ -71,7 +78,7 @@ async function parseResponse<T>(
       message: "API response error.",
       statusCode: response.status,
       originalMessage: responseBody?.error?.message,
-      path: responseBody.error?.path || path,
+      path: responseBody.error?.instance || path,
     } as ClientLogEntry;
 
     if (response.status >= 500) ClientLogger.LogError(log);
@@ -123,7 +130,8 @@ async function request<T>(
       // If the retried request also fails with 401, throw an error to trigger logout
       if (retried.status === AppStatusCode.Unauthorized) {
         throw new ApiError(
-          "Retried request failed: " + retried.statusText,
+          "Retried request failed",
+          retried.statusText,
           "[request]",
           path,
           retried.status,
@@ -136,16 +144,17 @@ async function request<T>(
     if (error instanceof TypeError) {
       const apiError = new ApiError(
         "Network error or CORS issue.",
+        error.message,
         "[request]",
         path,
         AppStatusCode.NetworkError,
       );
 
       ClientLogger.LogError({
-        message: apiError.message,
+        message: apiError.title,
         statusCode: AppStatusCode.NetworkError,
         originalMessage: error.message,
-        path: apiError.path,
+        path: apiError.instance,
       });
       throw apiError;
     }
@@ -157,26 +166,27 @@ async function request<T>(
       window.location.href = "/login";
 
       ClientLogger.LogError({
-        message: error.message,
+        message: error.title,
         statusCode: AppStatusCode.NetworkError,
         originalMessage: error.message,
-        path: error.path,
+        path: error.instance,
       });
       throw error;
     }
 
     const apiError = new ApiError(
       "An unexpected error occurred",
+      error instanceof Error ? error.message : String(error),
       "[request]",
       path,
       response?.status,
     );
 
     ClientLogger.LogError({
-      message: apiError.message,
+      message: apiError.title,
       statusCode: response?.status,
-      originalMessage: error instanceof Error ? error.message : String(error),
-      path: apiError.path,
+      originalMessage: apiError.message,
+      path: apiError.instance,
     });
     throw apiError;
   }

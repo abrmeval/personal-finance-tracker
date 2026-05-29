@@ -1,9 +1,9 @@
-import { MainLayout } from "@/components/layout/MainLayout.tsx";
-import { LoginPage } from "@/features/auth/LoginPage";
-import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
-import { RegisterPage } from "@/features/auth/RegisterPage";
-import { NotFoundPage } from "@/pages/NotFoundPage.tsx";
 import { createBrowserRouter } from "react-router-dom";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { NotFoundPage } from "@/pages/NotFoundPage";
+import { LoginPage } from "@/features/auth/LoginPage";
+import { RegisterPage } from "@/features/auth/RegisterPage";
 
 const router = createBrowserRouter([
   {
@@ -62,5 +62,4 @@ const router = createBrowserRouter([
     ],
   },
 ]);
-
 export default router;

@@ -19,24 +19,35 @@ export const AppStatusCode = {
 };
 
 export class ApiError extends Error {
+  title: string;
   context?: string;
-  path?: string;
-  validationErrors?: Record<string, string[]> | null;
-  statusCode?: number;
+  instance?: string;
+  modelErrors?: Record<string, string[]> | null;
+  status?: number;
 
+  /**
+   * 
+   * @param detail Error details
+   * @param context  Error context
+   * @param instance Error URI that identifies the specific occurrence
+   * @param status The HTTP status code
+   * @param modelErrors 
+   */
   constructor(
-    message: string,
+    title: string,
+    detail: string,
     context?: string,
-    path?: string,
-    statusCode?: number,
-    validationErrors?: Record<string, string[]> | null,
+    instance?: string,
+    status?: number,
+    modelErrors?: Record<string, string[]> | null,
   ) {
-    super(message);
+    super(detail);
     this.name = "ApiError";
     this.context = context;
-    this.path = path;
-    this.validationErrors = validationErrors;
-    this.statusCode = statusCode;
+    this.instance = instance;
+    this.modelErrors = modelErrors;
+    this.title = title;
+    this.status = status;
   }
 }
 

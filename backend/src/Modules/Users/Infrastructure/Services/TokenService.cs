@@ -6,16 +6,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Personal.FinanceTracker.Users.Application.Interfaces;
 using Personal.FinanceTracker.Users.Domain.Entities;
-public sealed class TokenService(IConfiguration configuration) : ITokenService
+using Personal.FinanceTracker.Users.Infrastructure.Configuration;
+using Microsoft.Extensions.Options;
+public sealed class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
+    private readonly JwtSettings _jwtSettings = jwtSettings.Value;
+
     public string GenerateAccessToken(User user)
     {
-        var jwtConfig = configuration.GetSection("Jwt");
-        var secretKey = jwtConfig["SecretKey"]!;
-        var issuer = jwtConfig["Issuer"]!;
-        var audience = jwtConfig["Audience"]!;
-        var expiryMinutes = int.Parse(jwtConfig["ExpiryMinutes"] ?? "60");
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var claims = new[]
         {
@@ -26,10 +25,10 @@ public sealed class TokenService(IConfiguration configuration) : ITokenService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+            expires: DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
             signingCredentials: credentials);
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
@@ -40,12 +39,10 @@ public sealed class TokenService(IConfiguration configuration) : ITokenService
     }
     public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
     {
-        var jwtConfig = configuration.GetSection("Jwt");
-        var secretKey = jwtConfig["SecretKey"]!;
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey!)),
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = false  // expired tokens are valid here — we only verify the signature
