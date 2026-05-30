@@ -8,6 +8,8 @@ using Personal.FinanceTracker.Users.Application.Interfaces;
 using Personal.FinanceTracker.Users.Domain.Entities;
 using Personal.FinanceTracker.Users.Infrastructure.Configuration;
 using Microsoft.Extensions.Options;
+namespace Personal.FinanceTracker.Users.Infrastructure.Services;
+
 public sealed class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
 {
     private readonly JwtSettings _jwtSettings = jwtSettings.Value;
@@ -32,11 +34,13 @@ public sealed class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenServ
             signingCredentials: credentials);
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
     public string GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(64);
         return Convert.ToBase64String(bytes);
     }
+
     public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
     {
         var validationParameters = new TokenValidationParameters
@@ -49,11 +53,13 @@ public sealed class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenServ
         };
         var handler = new JwtSecurityTokenHandler();
         var principal = handler.ValidateToken(token, validationParameters, out var securityToken);
+        
         if (securityToken is not JwtSecurityToken jwt ||
             !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase))
         {
             throw new UnauthorizedAccessException("Invalid token.");
         }
+        
         return principal;
     }
 }

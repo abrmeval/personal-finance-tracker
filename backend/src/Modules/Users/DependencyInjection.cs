@@ -11,6 +11,7 @@ using Personal.FinanceTracker.Users.Domain.Interfaces;
 using Personal.FinanceTracker.Users.Infrastructure.Configuration;
 using Personal.FinanceTracker.Users.Infrastructure.Data;
 using Personal.FinanceTracker.Users.Infrastructure.Repositories;
+using Personal.FinanceTracker.Users.Infrastructure.Services;
 namespace Personal.FinanceTracker.Users;
 
 public static class DependencyInjection

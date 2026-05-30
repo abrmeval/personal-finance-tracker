@@ -1,6 +1,6 @@
 # Personal Finance Tracker - Frontend Documentation
 
-> **React 18** | Vite • TypeScript • TanStack Query • React Hook Form • Chart.js  
+> **React 19** | Vite • TypeScript • TanStack Query • React Hook Form • Chart.js  
 > Tailwind CSS • Azure Static Web Apps
 
 ---
@@ -9,15 +9,15 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Framework** | React 18 | UI library |
+| **Framework** | React 19 | UI library |
 | **Build Tool** | Vite | Fast development & bundling |
-| **Language** | TypeScript | Type safety |
+| **Language** | TypeScript (strict) | Type safety |
 | **Styling** | Tailwind CSS | Utility-first CSS |
 | **Data Fetching** | TanStack Query (React Query) | Server state management |
 | **Forms** | React Hook Form + Zod | Form handling & validation |
 | **Charts** | Chart.js + react-chartjs-2 | Data visualization |
-| **Routing** | React Router v6 | Client-side routing |
-| **HTTP Client** | Axios | API requests |
+| **Routing** | React Router v7 | Client-side routing |
+| **HTTP Client** | Native `fetch` API | API requests (no Axios) |
 | **Icons** | Lucide React | Icon library |
 
 ---
@@ -28,88 +28,51 @@
 frontend/
 │
 ├── 📁 src/
-│   ├── 📁 api/                      # API client and endpoints
-│   │   ├── 📄 client.ts             # Axios instance configuration
-│   │   ├── 📄 transactions.ts       # Transaction API calls
-│   │   ├── 📄 categories.ts         # Category API calls
-│   │   ├── 📄 budgets.ts            # Budget API calls
-│   │   ├── 📄 reports.ts            # Reporting API calls
+│   ├── 📁 api/                      # API client and endpoint modules
+│   │   ├── 📄 client.ts             # Fetch-based client with 401→refresh logic
 │   │   └── 📄 auth.ts               # Authentication API calls
+│   │   (future: transactions.ts, categories.ts, budgets.ts, reports.ts)
 │   │
 │   ├── 📁 components/               # Reusable UI components
-│   │   ├── 📁 ui/                   # Base UI components
-│   │   │   ├── 📄 Button.tsx
-│   │   │   ├── 📄 Input.tsx
-│   │   │   ├── 📄 Card.tsx
-│   │   │   ├── 📄 Modal.tsx
-│   │   │   ├── 📄 Table.tsx
-│   │   │   └── 📄 Loading.tsx
-│   │   ├── 📁 forms/                # Form components
-│   │   │   ├── 📄 TransactionForm.tsx
-│   │   │   ├── 📄 CategoryForm.tsx
-│   │   │   └── 📄 BudgetForm.tsx
-│   │   ├── 📁 charts/               # Chart components
-│   │   │   ├── 📄 SpendingPieChart.tsx
-│   │   │   ├── 📄 IncomeExpenseChart.tsx
-│   │   │   └── 📄 TrendLineChart.tsx
-│   │   └── 📁 layout/               # Layout components
+│   │   ├── 📁 auth/
+│   │   │   ├── 📄 AuthProvider.tsx  # Auth state, login/register/logout handlers
+│   │   │   └── 📄 authContext.ts    # AuthContext object and AuthContextValue type
+│   │   └── 📁 layout/
 │   │       ├── 📄 Sidebar.tsx
-│   │       ├── 📄 Header.tsx
-│   │       └── 📄 MainLayout.tsx
+│   │       ├── 📄 Header.tsx        # Shows logged-in user + logout button
+│   │       └── 📄 MainLayout.tsx    # Shell: Sidebar + Header + <Outlet>
 │   │
 │   ├── 📁 features/                 # Feature-specific components
-│   │   ├── 📁 dashboard/
-│   │   │   ├── 📄 Dashboard.tsx
-│   │   │   ├── 📄 OverviewCards.tsx
-│   │   │   └── 📄 RecentTransactions.tsx
-│   │   ├── 📁 transactions/
-│   │   │   ├── 📄 TransactionList.tsx
-│   │   │   ├── 📄 TransactionFilters.tsx
-│   │   │   └── 📄 TransactionModal.tsx
-│   │   ├── 📁 categories/
-│   │   │   └── 📄 CategoryManager.tsx
-│   │   ├── 📁 budgets/
-│   │   │   ├── 📄 BudgetList.tsx
-│   │   │   └── 📄 BudgetProgress.tsx
-│   │   └── 📁 reports/
-│   │       ├── 📄 MonthlyReport.tsx
-│   │       └── 📄 CategoryBreakdown.tsx
+│   │   └── 📁 auth/
+│   │       ├── 📄 LoginPage.tsx
+│   │       ├── 📄 RegisterPage.tsx
+│   │       ├── 📄 ProtectedRoute.tsx
+│   │       └── 📄 schemas.ts        # loginSchema, registerSchema (Zod)
 │   │
-│   ├── 📁 hooks/                    # Custom React hooks
-│   │   ├── 📄 useAuth.ts
-│   │   ├── 📄 useTransactions.ts
-│   │   ├── 📄 useBudgets.ts
-│   │   └── 📄 useDebounce.ts
+│   ├── 📁 hooks/
+│   │   └── 📄 useAuth.ts            # Consumes AuthContext
 │   │
-│   ├── 📁 context/                  # React context providers
-│   │   └── 📄 AuthContext.tsx
+│   ├── 📁 pages/
+│   │   └── 📄 NotFoundPage.tsx
+│   │
+│   ├── 📁 routes/
+│   │   └── 📄 index.tsx             # createBrowserRouter — public + protected routes
 │   │
 │   ├── 📁 types/                    # TypeScript type definitions
-│   │   ├── 📄 transaction.ts
-│   │   ├── 📄 category.ts
-│   │   ├── 📄 budget.ts
-│   │   ├── 📄 user.ts
-│   │   └── 📄 api.ts
+│   │   ├── 📄 auth.ts               # UserResponse, AuthResponse, Login/RegisterRequest
+│   │   └── 📄 http.ts               # AppStatusCode, ApiError class, ApiResponse<T>
 │   │
-│   ├── 📁 utils/                    # Utility functions
-│   │   ├── 📄 formatters.ts
-│   │   ├── 📄 dateUtils.ts
-│   │   └── 📄 validators.ts
+│   ├── 📁 utils/
+│   │   ├── 📄 clientLogger.ts       # Structured client-side logging (suppressed in prod)
+│   │   └── 📄 documentTitle.ts      # setDocumentTitle() utility
 │   │
-│   ├── 📁 styles/                   # Global styles
-│   │   └── 📄 globals.css
-│   │
-│   ├── 📄 App.tsx                   # Root component
-│   ├── 📄 main.tsx                  # Entry point
-│   └── 📄 routes.tsx                # Route definitions
+│   ├── 📄 App.tsx                   # Root component — renders RouterProvider
+│   └── 📄 main.tsx                  # Entry point — QueryClientProvider + AuthProvider
 │
-├── 📁 public/                       # Static assets
 ├── 📄 index.html
 ├── 📄 package.json
-├── 📄 tsconfig.json
 ├── 📄 vite.config.ts
-├── 📄 tailwind.config.js
-└── 📄 .env.example
+└── 📄 tsconfig.app.json
 ```
 
 ---
@@ -211,146 +174,85 @@ export default defineConfig({
 
 ## 4. API Client Setup
 
-### Axios Instance
+### Fetch-based Client (no Axios)
+
+The project uses native `fetch` instead of Axios. The client is in `src/api/client.ts` and handles:
+- Attaching `Authorization: Bearer` from `localStorage` on every request
+- Deduplicating concurrent 401 responses (one refresh call, others wait)
+- Redirecting to `/login` after a failed refresh
+- Returning typed `ApiResponse<T>` on success, throwing `ApiError` for 5xx
+
+All API functions return `ApiResponse<T>` — **never raw `T`**. This mirrors the backend's uniform response envelope.
 
 ```typescript
-// src/api/client.ts
-import axios from 'axios';
+// src/types/http.ts
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+export enum AppStatusCode {
+  Ok = 200,
+  NoContent = 204,
+  BadRequest = 400,
+  Unauthorized = 401,
+  NotFound = 404,
+  InternalServerError = 500,
+  NetworkError = 0,
+}
 
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor - add auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor - handle errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Handle 401 - token expired
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
-
-        const { accessToken } = response.data;
-        localStorage.setItem('accessToken', accessToken);
-
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
+export class ApiError extends Error {
+  constructor(
+    public readonly title: string,
+    message: string,
+    public readonly context: string,
+    public readonly instance: string | undefined,
+    public readonly status: number | undefined,
+  ) {
+    super(message);
+    this.name = 'ApiError';
   }
-);
+}
+
+export interface ApiResponse<T> {
+  isOk: boolean;
+  data: T | null;
+  error: { message: string; instance?: string } | null;
+  statusCode: number;
+  codeText: string;
+}
 ```
 
-### Transaction API
-
 ```typescript
-// src/api/transactions.ts
-import { apiClient } from './client';
-import type { 
-  Transaction, 
-  CreateTransactionRequest, 
-  UpdateTransactionRequest,
-  TransactionQueryParams,
-  PagedResult 
-} from '@/types';
+// src/api/client.ts (simplified)
 
-export const transactionsApi = {
-  getAll: async (params?: TransactionQueryParams): Promise<PagedResult<Transaction>> => {
-    const response = await apiClient.get('/transactions', { params });
-    return response.data;
-  },
-
-  getById: async (id: string): Promise<Transaction> => {
-    const response = await apiClient.get(`/transactions/${id}`);
-    return response.data;
-  },
-
-  create: async (data: CreateTransactionRequest): Promise<Transaction> => {
-    const response = await apiClient.post('/transactions', data);
-    return response.data;
-  },
-
-  update: async (id: string, data: UpdateTransactionRequest): Promise<void> => {
-    await apiClient.put(`/transactions/${id}`, data);
-  },
-
-  delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/transactions/${id}`);
-  },
+export const apiClient = {
+  get:    <T>(path: string) => request<T>(path, { method: 'GET' }),
+  post:   <T>(path: string, body?: unknown) =>
+            request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  put:    <T>(path: string, body?: unknown) =>
+            request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  patch:  <T>(path: string, body?: unknown) =>
+            request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 ```
 
-### Reports API
+> **Important:** Use `return await parseResponse<T>(response)` — not `return parseResponse<T>(response)` — inside any `try-catch` block. Without `await`, the promise escapes the catch scope and errors propagate to the caller unexpectedly.
+
+### Auth API
 
 ```typescript
-// src/api/reports.ts
+// src/api/auth.ts
 import { apiClient } from './client';
-import type { 
-  DashboardSummary, 
-  MonthlySummary, 
-  CategoryBreakdown 
-} from '@/types';
+import type { ApiResponse } from '@/types/http';
+import type { AuthResponse, LoginRequest, RegisterRequest, RefreshTokenRequest } from '@/types/auth';
 
-export const reportsApi = {
-  getDashboardSummary: async (): Promise<DashboardSummary> => {
-    const response = await apiClient.get('/reports/dashboard');
-    return response.data;
-  },
-
-  getMonthlySummary: async (year: number, month: number): Promise<MonthlySummary> => {
-    const response = await apiClient.get(`/reports/monthly/${year}/${month}`);
-    return response.data;
-  },
-
-  getCategoryBreakdown: async (
-    startDate: string,
-    endDate: string
-  ): Promise<CategoryBreakdown[]> => {
-    const response = await apiClient.get('/reports/categories', {
-      params: { startDate, endDate },
-    });
-    return response.data;
-  },
-
-  getIncomeVsExpenses: async (
-    months: number = 6
-  ): Promise<{ month: string; income: number; expenses: number }[]> => {
-    const response = await apiClient.get('/reports/income-vs-expenses', {
-      params: { months },
-    });
-    return response.data;
-  },
+export const authApi = {
+  login:   (data: LoginRequest) =>
+             apiClient.post<ApiResponse<AuthResponse>>('/auth/login', data),
+  register:(data: RegisterRequest) =>
+             apiClient.post<ApiResponse<AuthResponse>>('/auth/register', data),
+  refresh: (data: RefreshTokenRequest) =>
+             apiClient.post<ApiResponse<AuthResponse>>('/auth/refresh', data),
+  revoke:  (data: RefreshTokenRequest) =>
+             apiClient.post<ApiResponse<void>>('/auth/revoke', data),
 };
 ```
 
@@ -365,10 +267,9 @@ export const reportsApi = {
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import './styles/globals.css';
+import App from './App.tsx';
+import { AuthProvider } from '@/components/auth/AuthProvider.tsx';
+import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -383,14 +284,15 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <AuthProvider>
         <App />
-      </BrowserRouter>
-      <ReactQueryDevtools initialIsOpen={false} />
+      </AuthProvider>
     </QueryClientProvider>
   </React.StrictMode>
 );
 ```
+
+> `AuthProvider` wraps `App` (which renders `RouterProvider`) so the auth context is available to all routes including the router itself.
 
 ### Custom Hooks with React Query
 
@@ -1081,8 +983,58 @@ export function OverviewCards({
 
 ## 9. TypeScript Types
 
+### Auth Types (Sprint 1 — implemented)
+
 ```typescript
-// src/types/transaction.ts
+// src/types/auth.ts
+export interface UserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface AuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: UserResponse;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+```
+
+### HTTP / API Types
+
+```typescript
+// src/types/http.ts
+export interface ApiResponse<T> {
+  isOk: boolean;
+  data: T | null;
+  error: { message: string; instance?: string } | null;
+  statusCode: number;
+  codeText: string;
+}
+```
+
+### Future Feature Types (Sprint 2+)
+
+```typescript
+// src/types/transaction.ts (planned)
 export type TransactionType = 'Income' | 'Expense';
 
 export interface Transaction {
@@ -1096,49 +1048,11 @@ export interface Transaction {
   createdAt: string;
 }
 
-export interface CreateTransactionRequest {
-  description: string;
-  amount: number;
-  type: TransactionType;
-  date: string;
-  categoryId?: string;
-}
-
-export interface UpdateTransactionRequest {
-  description: string;
-  amount: number;
-  date: string;
-  categoryId?: string;
-}
-
-export interface TransactionQueryParams {
-  startDate?: string;
-  endDate?: string;
-  categoryId?: string;
-  type?: TransactionType;
-  page?: number;
-  pageSize?: number;
-}
-
-// src/types/api.ts
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
   page: number;
   pageSize: number;
-}
-
-export interface DashboardSummary {
-  totalBalance: number;
-  monthlyIncome: number;
-  monthlyExpenses: number;
-}
-
-export interface CategoryBreakdown {
-  categoryId: string;
-  categoryName: string;
-  total: number;
-  transactionCount: number;
 }
 ```
 
@@ -1147,57 +1061,21 @@ export interface CategoryBreakdown {
 ## 10. Utility Functions
 
 ```typescript
-// src/utils/formatters.ts
-export function formatCurrency(
-  amount: number,
-  currency: string = 'USD',
-  locale: string = 'en-US'
-): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-  }).format(amount);
-}
+// src/utils/clientLogger.ts
+// Structured logging — suppressed in production (VITE_ENVIRONMENT !== 'development')
+export const ClientLogger = {
+  LogInfo:    (entry: ClientLogEntry) => { ... },
+  LogWarning: (entry: ClientLogEntry) => { ... },
+  LogError:   (entry: ClientLogEntry) => { ... },
+};
 
-export function formatDate(
-  date: string | Date,
-  options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }
-): string {
-  return new Date(date).toLocaleDateString('en-US', options);
-}
-
-export function formatPercentage(value: number, decimals: number = 1): string {
-  return `${value.toFixed(decimals)}%`;
-}
-
-// src/utils/dateUtils.ts
-import { 
-  startOfMonth, 
-  endOfMonth, 
-  subMonths, 
-  format 
-} from 'date-fns';
-
-export function getCurrentMonthRange() {
-  const now = new Date();
-  return {
-    startDate: format(startOfMonth(now), 'yyyy-MM-dd'),
-    endDate: format(endOfMonth(now), 'yyyy-MM-dd'),
-  };
-}
-
-export function getLastNMonthsRange(n: number) {
-  const now = new Date();
-  return {
-    startDate: format(startOfMonth(subMonths(now, n - 1)), 'yyyy-MM-dd'),
-    endDate: format(endOfMonth(now), 'yyyy-MM-dd'),
-  };
+// src/utils/documentTitle.ts
+export function setDocumentTitle(title: string): void {
+  document.title = title ? `${title} | Personal Finance Tracker` : 'Personal Finance Tracker';
 }
 ```
+
+> Future Sprint 4 utilities (`formatCurrency`, `formatDate`, `getCurrentMonthRange`) will be added to `src/utils/` when the dashboard is built.
 
 ---
 

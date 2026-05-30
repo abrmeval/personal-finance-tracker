@@ -75,7 +75,7 @@ Get both stacks from scaffolding to a working, runnable baseline. No feature wor
 
 **Duration:** 1.5 weeks
 **Doc:** [sprint-1.md](./sprint-1.md)
-**Status:** New
+**Status:** Done
 
 ### Goals
 Users can register and log in. JWT-protected routes work end-to-end. Frontend has a working auth flow with refresh token handling.
@@ -244,4 +244,4 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 
 ---
 
-*Last updated: 12/05/2026*
+*Last updated: 29/05/2026*

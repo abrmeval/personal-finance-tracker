@@ -7,11 +7,18 @@ import { registerSchema } from "@/features/auth/schemas";
 import type { RegisterFormData } from "@/features/auth/schemas";
 import { ApiError, AppStatusCode } from "@/types/http";
 import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
+import { setDocumentTitle } from "@/utils/documentTitle";
 
 export function RegisterPage() {
   const { register: registerUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [modelErrors, setModelErrors] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
+
+  setDocumentTitle("Register page");
 
   useEffect(() => {
     if (isAuthenticated) navigate("/", { replace: true });
@@ -27,6 +34,8 @@ export function RegisterPage() {
 
   async function onSubmit(data: RegisterFormData) {
     setServerError(null);
+    setModelErrors(null);
+
     try {
       await registerUser({
         email: data.email,
@@ -38,6 +47,10 @@ export function RegisterPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         setServerError(error.title);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
       } else {
         ClientLogger.LogError({
           message: "Unexpected error during registration",
@@ -90,6 +103,13 @@ export function RegisterPage() {
                   {errors.firstName.message}
                 </p>
               )}
+
+              {modelErrors?.firstName &&
+                modelErrors.firstName.map((msg, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
             </div>
             <div>
               <label
@@ -111,6 +131,13 @@ export function RegisterPage() {
                   {errors.lastName.message}
                 </p>
               )}
+
+              {modelErrors?.lastName &&
+                modelErrors.lastName.map((msg, idx) => (
+                  <p key={idx} className="text-xs text-red-600">
+                    {msg}
+                  </p>
+                ))}
             </div>
           </div>
           <div>
@@ -133,6 +160,12 @@ export function RegisterPage() {
                 {errors.email.message}
               </p>
             )}
+            {modelErrors?.email &&
+              modelErrors.email.map((msg, idx) => (
+                <p key={idx} className="text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
           </div>
           <div>
             <label
@@ -154,6 +187,12 @@ export function RegisterPage() {
                 {errors.password.message}
               </p>
             )}
+            {modelErrors?.password &&
+              modelErrors.password.map((msg, idx) => (
+                <p key={idx} className="text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
           </div>
           <div>
             <label
@@ -175,6 +214,13 @@ export function RegisterPage() {
                 {errors.confirmPassword.message}
               </p>
             )}
+
+            {modelErrors?.confirmPassword &&
+              modelErrors.confirmPassword.map((msg, idx) => (
+                <p key={idx} className="text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
           </div>
           <button
             type="submit"

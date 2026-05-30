@@ -18,6 +18,9 @@ export const AppStatusCode = {
   ClientError: 601,
 };
 
+/**
+ * Represents an error response from the API, including details about the error, context, and any model validation errors.
+ */
 export class ApiError extends Error {
   title: string;
   context?: string;
@@ -26,12 +29,13 @@ export class ApiError extends Error {
   status?: number;
 
   /**
-   * 
+   * Creates a new instance of the ApiError class.
+   * @param title The title of the error
    * @param detail Error details
    * @param context  Error context
    * @param instance Error URI that identifies the specific occurrence
    * @param status The HTTP status code
-   * @param modelErrors 
+   * @param modelErrors Model validation errors
    */
   constructor(
     title: string,
