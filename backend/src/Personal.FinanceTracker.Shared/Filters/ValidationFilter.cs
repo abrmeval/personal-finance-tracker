@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Personal.FinanceTracker.Shared.Models;
 
 namespace Personal.FinanceTracker.Shared.Filters;
 
@@ -17,7 +18,19 @@ public sealed class ValidationFilter<T>(IValidator<T> validator) : IEndpointFilt
         var argument = context.Arguments.OfType<T>().FirstOrDefault();
 
         if (argument is null)
-            return TypedResults.BadRequest("Request body is required.");
+            return TypedResults.BadRequest(new ApiResponse<object>
+            {
+                IsOk = false,
+                Error = new ApiError
+                {
+                    Title = "Validation Failed",
+                    Status = StatusCodes.Status400BadRequest,
+                    Detail = "Request body is missing or invalid.",
+                    Instance = context.HttpContext.Request.Path,
+                },
+                StatusCode = StatusCodes.Status400BadRequest,
+                CodeText = "Bad Request"
+            });
 
         var result = await validator.ValidateAsync(argument);
 
@@ -27,7 +40,20 @@ public sealed class ValidationFilter<T>(IValidator<T> validator) : IEndpointFilt
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
 
-            return TypedResults.ValidationProblem(errors);
+            return TypedResults.BadRequest(new ApiResponse<object>
+            {
+                IsOk = false,
+                Error = new ApiError
+                {
+                    Title = "Validation Failed",
+                    Status = StatusCodes.Status400BadRequest,
+                    Detail = "One or more validation errors occurred.",
+                    Instance = context.HttpContext.Request.Path,
+                    ModelErrors = errors
+                },
+                StatusCode = StatusCodes.Status400BadRequest,
+                CodeText = "Bad Request"
+            });
         }
 
         return await next(context);

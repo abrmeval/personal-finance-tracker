@@ -10,6 +10,9 @@ description: |
   - 'I need a sprint for'
   - 'update sprint status'
   - 'track sprint progress'
+  - 'work on sprint planning'
+  - 'help me structure a sprint'
+  - 'create a plan for the next sprint'
 
   Examples:
   - User says 'I need to create a sprint plan for the authentication feature' → invoke this agent to structure sprint with tasks and deadlines

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Personal.FinanceTracker.Shared.Exceptions;
+using Personal.FinanceTracker.Shared.Models;
 
 namespace Personal.FinanceTracker.Shared.Middleware;
 
@@ -30,21 +31,29 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
     {
         var (statusCode, title) = exception switch
         {
-            NotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
-            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
-            FluentValidation.ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
-            _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+            NotFoundException => (StatusCodes.Status404NotFound, "The requested resource was not found."),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Not authorized to access this resource."),
+            FluentValidation.ValidationException => (StatusCodes.Status400BadRequest, "The request is invalid."),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred while processing the request.")
         };
 
-        var problemDetails = new ProblemDetails
+        var apiError = new ApiError
         {
+            Type = exception.GetType().Name,
             Status = statusCode,
             Title = title,
-            Detail = exception.Message
+            Detail = exception.Message,
+            Instance = context.Request.Path
         };
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(problemDetails);
+        await context.Response.WriteAsJsonAsync(new ApiResponse<object>
+        {
+            IsOk = false,
+            Error = apiError,
+            StatusCode = statusCode,
+            CodeText = title
+        });
     }
 }

@@ -1,7 +1,7 @@
 # Sprint 0 — Foundation & Tooling
 
 **Duration:** 12/05/2026 — 19/05/2026
-**Status:** New
+**Status:** Done
 **Overview:** [SPRINTS-OVERVIEW.md](./SPRINTS-OVERVIEW.md)
 
 ---
