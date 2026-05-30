@@ -1,7 +1,7 @@
 # Personal Finance Tracker - Project Structure
 
-> **Version 1.0** | Modular Monolith Architecture  
-> ASP.NET 8 • React • Neon PostgreSQL • Azure
+> **Version 1.1** | Modular Monolith Architecture  
+> ASP.NET 10 • React • Neon PostgreSQL • Azure
 
 ---
 
@@ -136,6 +136,64 @@ Each module follows a consistent layered structure:
 ### Finance Module Example
 
 ```
+backend/src/Modules/Users/          ← Implemented (Sprint 1)
+│
+├── 📁 Domain/
+│   ├── 📁 Entities/
+│   │   ├── 📄 User.cs
+│   │   └── 📄 RefreshToken.cs
+│   └── 📁 Interfaces/
+│       ├── 📄 IRepository.cs       ← Generic base interface
+│       └── 📄 IUserRepository.cs
+│
+├── 📁 Application/
+│   ├── 📁 DTOs/
+│   │   ├── 📁 Requests/
+│   │   │   ├── 📄 LoginRequest.cs
+│   │   │   ├── 📄 RegisterRequest.cs
+│   │   │   └── 📄 RefreshTokenRequest.cs
+│   │   └── 📁 Responses/
+│   │       ├── 📄 AuthResponse.cs
+│   │       └── 📄 UserResponse.cs
+│   ├── 📁 Interfaces/             ← Service + settings contracts
+│   │   ├── 📄 IJwtSettings.cs
+│   │   ├── 📄 ITokenService.cs
+│   │   └── 📄 IUserService.cs
+│   └── 📁 Validators/
+│       ├── 📄 LoginRequestValidator.cs
+│       └── 📄 RegisterRequestValidator.cs
+│
+├── 📁 Infrastructure/
+│   ├── 📁 Configuration/
+│   │   └── 📄 JwtSettings.cs      ← IOptions<JwtSettings> binding
+│   ├── 📁 Data/
+│   │   ├── 📄 UsersDbContext.cs
+│   │   ├── 📁 Configurations/
+│   │   │   ├── 📄 UserConfiguration.cs
+│   │   │   └── 📄 RefreshTokenConfiguration.cs
+│   │   └── 📁 Migrations/
+│   │       └── 📄 20260519200017_InitialUsersSchema.cs
+│   ├── 📁 Repositories/
+│   │   └── 📄 UserRepository.cs
+│   └── 📁 Services/
+│       ├── 📄 TokenService.cs     ← Infrastructure; implements ITokenService
+│       └── 📄 UserService.cs      ← Infrastructure; implements IUserService
+│
+├── 📁 Api/
+│   └── 📁 Endpoints/
+│       └── 📄 AuthEnpoints.cs     ← Note: filename typo (missing 'd')
+│
+└── 📄 DependencyInjection.cs      ← AddUsersModule + MapUsersEndpoints
+```
+
+> **Note on service placement:** `UserService` and `TokenService` both live in `Infrastructure/Services/`
+> because they depend on infrastructure concerns — BCrypt (external library) and `IOptions<JwtSettings>`
+> respectively. Their contracts (`IUserService`, `ITokenService`) remain in `Application/Interfaces/`,
+> maintaining correct dependency flow.
+
+### Finance Module Example (planned — Sprint 2)
+
+```
 backend/src/Modules/Finance/
 │
 ├── 📁 Domain/                           # Core business logic (no dependencies)
@@ -262,30 +320,27 @@ using PersonalFinanceTracker.Shared.Contracts;
 The Shared project contains cross-cutting concerns:
 
 ```
-backend/src/PersonalFinanceTracker.Shared/
+backend/src/Personal.FinanceTracker.Shared/
 │
 ├── 📁 Abstractions/
-│   ├── 📄 IEntity.cs
-│   ├── 📄 IAuditableEntity.cs
-│   └── 📄 IRepository.cs
+│   └── 📄 Entity.cs                    ← Abstract base: Id, CreatedAt, UpdatedAt
 │
-├── 📁 Contracts/                        # Shared DTOs for inter-module comm
-│   ├── 📄 UserInfo.cs
-│   └── 📄 TransactionSummary.cs
+├── 📁 Exceptions/
+│   └── 📄 NotFoundException.cs
 │
 ├── 📁 Extensions/
-│   ├── 📄 ServiceCollectionExtensions.cs
-│   ├── 📄 StringExtensions.cs
-│   └── 📄 DateTimeExtensions.cs
+│   └── 📄 ClaimsPrincipalExtensions.cs ← GetUserId(), GetEmail()
+│
+├── 📁 Filters/
+│   └── 📄 ValidationFilter.cs          ← IEndpointFilter wrapping FluentValidation
 │
 ├── 📁 Middleware/
-│   ├── 📄 ExceptionHandlingMiddleware.cs
-│   └── 📄 RequestLoggingMiddleware.cs
+│   └── 📄 ExceptionHandlingMiddleware.cs
 │
-├── 📁 Validation/
-│   └── 📄 ValidationFilter.cs
-│
-└── 📄 Shared.csproj
+└── 📁 Models/
+    ├── 📄 ApiError.cs                  ← Extends ProblemDetails; adds Context, ModelErrors
+    ├── 📄 ApiResponse.cs               ← ApiResponse<T>: IsOk, Data, Error, StatusCode, CodeText
+    └── 📄 Result.cs                    ← Result<T>: IsSuccess, Value, Error; ErrorResult record
 ```
 
 ---
@@ -295,19 +350,12 @@ backend/src/PersonalFinanceTracker.Shared/
 The main entry point that composes all modules:
 
 ```
-backend/src/PersonalFinanceTracker.Api/
+backend/src/Personal.FinanceTracker.Api/
 │
 ├── 📄 Program.cs                        # Application bootstrap
 ├── 📄 appsettings.json                  # Base configuration
 ├── 📄 appsettings.Development.json      # Dev overrides
-├── 📄 appsettings.Production.json       # Prod overrides
-│
-├── 📁 Configuration/
-│   ├── 📄 SwaggerConfiguration.cs
-│   ├── 📄 AuthenticationConfiguration.cs
-│   └── 📄 CorsConfiguration.cs
-│
-└── 📄 PersonalFinanceTracker.Api.csproj
+└── 📄 appsettings.Local.json            # Local secrets (gitignored)
 ```
 
 ### Program.cs Structure
@@ -352,17 +400,17 @@ app.Run();
 Shared MSBuild properties for all projects:
 
 ```xml
+<!-- backend/Directory.Build.props -->
 <Project>
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Shared analyzers -->
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="8.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="...">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
@@ -384,51 +432,7 @@ csharp_style_var_when_type_is_apparent = true
 
 ---
 
-## 9. Getting Started
-
-### Prerequisites
-
-- .NET 8 SDK
-- Node.js 20+ (for frontend)
-- Docker (for local PostgreSQL or TestContainers)
-- Azure CLI (for deployment)
-
-### Initial Setup
-
-```bash
-# Clone repository
-git clone https://github.com/your-org/personal-finance-tracker.git
-cd personal-finance-tracker
-
-# Restore .NET dependencies
-cd backend
-dotnet restore
-
-# Install frontend dependencies
-cd ../frontend && npm install && cd ..
-
-# Set up local database (using Docker)
-docker run -d --name finance-db \
-  -e POSTGRES_USER=finance \
-  -e POSTGRES_PASSWORD=localdev \
-  -e POSTGRES_DB=financetracker \
-  -p 5432:5432 \
-  postgres:16
-
-# Run migrations (from backend folder)
-cd backend
-dotnet ef database update --project src/Modules/Finance
-
-# Start the API
-dotnet run --project src/PersonalFinanceTracker.Api
-
-# Start frontend (in another terminal, from root)
-cd frontend && npm run dev
-```
-
----
-
-## 10. References
+## 9. References
 
 - [Microsoft: Modular Monolith Architecture](https://learn.microsoft.com/en-us/dotnet/architecture/)
 - [Milan Jovanovic: Modular Monolith Primer](https://www.milanjovanovic.tech/blog/what-is-a-modular-monolith)

@@ -1,7 +1,7 @@
 # Sprint 1 — Users Module / Authentication
 
 **Duration:** 19/05/2026 — 30/05/2026
-**Status:** New
+**Status:** Done
 **Overview:** [SPRINTS-OVERVIEW.md](./SPRINTS-OVERVIEW.md)
 
 ---
@@ -58,7 +58,7 @@ Sprint 1 builds the Users module end-to-end: domain entity, repository, JWT toke
 
 ### Task 1 — Create the Users Module Project
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `Personal.FinanceTracker.Users` class library project inside `backend/src/Modules/Users/`, register it in the solution, and add the required project references: Users → Shared, Api → Users.
@@ -132,7 +132,7 @@ Create the `Personal.FinanceTracker.Users` class library project inside `backend
 
 ### Task 2 — Install NuGet Packages into the Users Project
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Install all NuGet packages required by the Users module. The `FrameworkReference` covers ASP.NET Core packages; only third-party and EF Core packages need explicit references.
@@ -168,7 +168,7 @@ Install all NuGet packages required by the Users module. The `FrameworkReference
 
 ### Task 3 — User Domain Entity
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `User` entity in the Domain layer. It extends `Entity` from `Personal.FinanceTracker.Shared.Abstractions`, uses a private constructor, a static `Create` factory method, and an `UpdatePassword` method. All properties have `private set`.
@@ -240,7 +240,7 @@ Create the `User` entity in the Domain layer. It extends `Entity` from `Personal
 
 ### Task 4 — RefreshToken Domain Entity
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `RefreshToken` entity. It does not extend `Entity` (it has no `UpdatedAt` semantics and revocation is a one-way operation). It uses a private constructor, a static `Create` factory, and a `Revoke()` method.
@@ -300,7 +300,9 @@ Create the `RefreshToken` entity. It does not extend `Entity` (it has no `Update
 
 ### Task 5 — IUserRepository Interface
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** A generic `IRepository<T>` base interface was added to `Domain/Interfaces/IRepository.cs`. `IUserRepository` extends it. This was not in the original spec but aligns with the architecture.
 
 **Description:**
 Define the repository interface in the Application layer. The domain defines the contract; Infrastructure implements it. All methods accept a `CancellationToken`.
@@ -335,7 +337,9 @@ Define the repository interface in the Application layer. The domain defines the
 
 ### Task 6 — UsersDbContext and Entity Configurations
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** Index names use `idx_` prefix in the actual migration rather than the `ix_` prefix shown in this spec. Functionally equivalent.
 
 **Description:**
 Create `UsersDbContext` with the `users` schema, and `IEntityTypeConfiguration<T>` classes for both entities using Fluent API only — no Data Annotations on entities. All column names use snake_case.
@@ -492,7 +496,7 @@ Create `UsersDbContext` with the `users` schema, and `IEntityTypeConfiguration<T
 
 ### Task 7 — UserRepository Implementation
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Implement `IUserRepository` in the Infrastructure layer using `UsersDbContext`. Pass `CancellationToken` through to all EF Core async calls.
@@ -546,7 +550,9 @@ Implement `IUserRepository` in the Infrastructure layer using `UsersDbContext`. 
 
 ### Task 8 — EF Core Migration: InitialUsersSchema
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** Step 6 (remove the temporary `AddDbContext` call from `Program.cs`) was NOT completed. The temporary registration on lines 13–14 of `Program.cs` remains alongside the `AddUsersModule` call on line 65. This creates a duplicate `UsersDbContext` DI registration. This should be cleaned up before Sprint 2.
 
 **Description:**
 Create and verify the initial EF Core migration for the Users module. The migration creates the `users` schema, `users.users` table, and `users.refresh_tokens` table.
@@ -603,7 +609,7 @@ Create and verify the initial EF Core migration for the Users module. The migrat
 
 ### Task 9 — DTOs (Request and Response Records)
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create all request and response DTOs as `record` types. They live in the Application layer. Response types are immutable value objects — no setters.
@@ -669,7 +675,9 @@ Create all request and response DTOs as `record` types. They live in the Applica
 
 ### Task 10 — FluentValidation Validators
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** `RegisterRequestValidator` includes additional rules beyond this spec: a special character requirement (`.Matches("[.,&()-*]")`) and character set constraints on name fields. `LoginRequestValidator` adds `MaximumLength(256)` on the email field. These are valid enhancements.
 
 **Description:**
 Create one `AbstractValidator<T>` per mutating request. Validators live in `Application/Validators/` and are registered via `AddValidatorsFromAssemblyContaining<T>()` in the module registration.
@@ -742,7 +750,13 @@ Create one `AbstractValidator<T>` per mutating request. Validators live in `Appl
 
 ### Task 11 — ITokenService and TokenService
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** This spec placed `ITokenService` in `Application/Services/`. The actual implementation places it in `Application/Interfaces/` — consistent with how `IUserService` and `IJwtSettings` are placed. `TokenService` uses `IOptions<JwtSettings>` instead of reading `IConfiguration` string keys directly (cleaner, strongly-typed). An additional `IJwtSettings` interface and `JwtSettings` class were introduced — see Task 15 notes.
+>
+> Both `ITokenService` and `TokenService` now live at:
+> - `Application/Interfaces/ITokenService.cs`
+> - `Infrastructure/Services/TokenService.cs`
 
 **Description:**
 Create the token service interface in the Application layer and its implementation in Infrastructure. `TokenService` reads JWT configuration from `IConfiguration`, generates access tokens (signed JWTs), generates refresh tokens (cryptographically random), and can extract a `ClaimsPrincipal` from an expired access token for the refresh flow.
@@ -854,7 +868,11 @@ Create the token service interface in the Application layer and its implementati
 
 ### Task 12 — IUserService and UserService
 
-**Status:** New
+**Status:** Done
+
+> **Intentional deviation:** This spec defines `IUserService` with nullable return types (`AuthResponse?`, `bool`). The actual implementation uses `Result<AuthResponse>` and `Result<bool>` throughout. This is a deliberate, better design — `Result<T>` makes success/failure explicit without null checks and carries a typed error code + description. See `DESIGN_PATTERNS.md` — Result Pattern.
+>
+> `UserService` lives in `Infrastructure/Services/` (not `Application/Services/`) because it depends on `BCrypt.Net.BCrypt`, an external library. Its contract `IUserService` remains in `Application/Interfaces/`. This is consistent with the `ITokenService`/`TokenService` placement and is the correct pattern — see `DESIGN_PATTERNS.md` — Service Placement Rule.
 
 **Description:**
 Create the user service interface in Application and its implementation. All business logic (duplicate email check, BCrypt hashing, token rotation) lives here. Endpoints remain thin. Services return `null` or `bool` for expected not-found/failure cases — they throw only for programming errors or truly invalid state.
@@ -1025,7 +1043,7 @@ Create the user service interface in Application and its implementation. All bus
 
 ### Task 13 — ClaimsPrincipalExtensions in Shared
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add `ClaimsPrincipalExtensions` to the Shared project so all modules can extract typed values from the authenticated user's claims. These will be used by Auth endpoints to get `UserId` and by future Finance/Reporting endpoints.
@@ -1066,7 +1084,9 @@ Add `ClaimsPrincipalExtensions` to the Shared project so all modules can extract
 
 ### Task 14 — AuthEndpoints Minimal API
 
-**Status:** New
+**Status:** Done
+
+> **Intentional deviation:** Endpoints return `ApiResponse<AuthResponse>` envelopes rather than bare `AuthResponse` / `UnauthorizedHttpResult` as shown in this spec. This is consistent with the project-wide `ApiResponse<T>` pattern. `HttpContext` is injected to populate `Error.Instance` with the request path. The file has a typo in its name: `AuthEnpoints.cs` (missing 'd') — cosmetic, does not affect functionality.
 
 **Description:**
 Create the `AuthEndpoints` static class in the Api layer. Endpoints are thin — they delegate entirely to `IUserService`. Use `TypedResults` for full OpenAPI type inference. Apply `ValidationFilter<T>` to mutating endpoints.
@@ -1185,7 +1205,13 @@ Create the `AuthEndpoints` static class in the Api layer. Endpoints are thin —
 
 ### Task 15 — UsersModule Registration and Wire into Program.cs
 
-**Status:** New
+**Status:** Done
+
+> **Implementation notes:**
+> - The module registration class is named `DependencyInjection` (not `UsersModule` as in the spec). The extension methods are `AddUsersModule` and `MapUsersEndpoints` as specified.
+> - Two additions beyond the spec: `IJwtSettings` interface in `Application/Interfaces/` and `JwtSettings` concrete class in `Infrastructure/Configuration/`, registered as a singleton via `IOptions<JwtSettings>`. This decouples services from `IConfiguration` string indexers.
+> - The stale TODO comment (`// TODO Sprint 1: builder.Services.AddUsersModule(...)`) was not removed from `Program.cs`. Clean this up before Sprint 2.
+> - The temporary `AddDbContext<UsersDbContext>` registration from Task 8 Step 2 was not removed. See Task 8 note above.
 
 **Description:**
 Create the module registration class `UsersModule.cs` at the root of the Users project. This class is the single entry point for DI registration and endpoint mapping. Then replace the TODO Sprint 1 comments in `Program.cs` with the actual calls.
@@ -1289,7 +1315,9 @@ Create the module registration class `UsersModule.cs` at the root of the Users p
 
 ### Task 16 — Frontend: Auth Type Definitions
 
-**Status:** New
+**Status:** Done
+
+> **Extra additions:** `src/types/http.ts` was added (not in spec) — centralises `AppStatusCode` enum, `ApiError` class, and `ApiResponse<T>` interface. These are used throughout the client.
 
 **Description:**
 Create the TypeScript type definitions that mirror the backend DTOs exactly. All types live in `src/types/auth.ts`.
@@ -1339,7 +1367,9 @@ Create the TypeScript type definitions that mirror the backend DTOs exactly. All
 
 ### Task 17 — Frontend: Fetch-based API Client
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** The actual `client.ts` is more robust than the spec's simplified version. It includes a richer `ApiError` class (with `title`, `context`, `instance`, `status` fields), a `parseResponse` function, and `ClientLogger` integration for structured error logging. All API functions return `ApiResponse<T>` envelopes — not raw `T` — matching the backend response shape. The `return await` vs `return` distinction in `try-catch` is critical — see `client.ts` comments.
 
 **Description:**
 Create `src/api/client.ts` — a lightweight, typed wrapper around the native `fetch` API. It attaches the `Authorization: Bearer` header from `localStorage` on every request, handles 401 responses by attempting a token refresh (with a queue for concurrent 401s), and redirects to `/login` on refresh failure. No external HTTP library is used.
@@ -1477,7 +1507,9 @@ Create `src/api/client.ts` — a lightweight, typed wrapper around the native `f
 
 ### Task 18 — Frontend: Auth API Module
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** `authApi` functions return `ApiResponse<AuthResponse>` envelopes (not bare `AuthResponse`) matching the actual backend response shape. The spec showed bare return types which were based on the original nullable service design.
 
 **Description:**
 Create `src/api/auth.ts` — the `authApi` object with fully typed functions for all four auth endpoints. Uses `apiClient` from `@/api/client` exclusively — no direct `fetch` calls.
@@ -1515,7 +1547,9 @@ Create `src/api/auth.ts` — the `authApi` object with fully typed functions for
 
 ### Task 19 — Frontend: AuthContext and AuthProvider
 
-**Status:** New
+**Status:** Done
+
+> **Implementation note:** The context is split across two files — `src/components/auth/authContext.ts` (context object + type) and `src/components/auth/AuthProvider.tsx` (provider component) — rather than a single `src/context/AuthContext.tsx` as in the spec. The import path for `useAuth` uses the `components/auth/` location. Functionally equivalent.
 
 **Description:**
 Create `src/context/AuthContext.tsx`. The provider reads tokens from `localStorage` on mount (so auth state survives a page refresh), stores the decoded user, and exposes `login`, `register`, `logout`, `isAuthenticated`, and `isLoading`.
@@ -1648,7 +1682,7 @@ Create `src/context/AuthContext.tsx`. The provider reads tokens from `localStora
 
 ### Task 20 — Frontend: useAuth Hook
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `src/hooks/useAuth.ts` — a simple hook that consumes `AuthContext` and throws a descriptive error if used outside the provider.
@@ -1681,7 +1715,7 @@ Create `src/hooks/useAuth.ts` — a simple hook that consumes `AuthContext` and 
 
 ### Task 21 — Frontend: Auth Zod Schemas
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the Zod schemas for the login and register forms. Co-locate them in `src/features/auth/schemas.ts`. Infer the form data types from the schemas.
@@ -1744,7 +1778,7 @@ Create the Zod schemas for the login and register forms. Co-locate them in `src/
 
 ### Task 22 — Frontend: LoginPage
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `src/features/auth/LoginPage.tsx`. Uses React Hook Form + Zod, shows inline field errors, shows a loading state during submission, displays a server-level error if credentials are invalid, and redirects to `/` if the user is already authenticated.
@@ -1868,7 +1902,7 @@ Create `src/features/auth/LoginPage.tsx`. Uses React Hook Form + Zod, shows inli
 
 ### Task 23 — Frontend: RegisterPage
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `src/features/auth/RegisterPage.tsx`. Same pattern as `LoginPage` — React Hook Form + Zod, inline errors, loading state, server error handling, redirect if already authenticated. Includes the `confirmPassword` field (validated client-side only, not sent to the API).
@@ -2049,7 +2083,7 @@ Create `src/features/auth/RegisterPage.tsx`. Same pattern as `LoginPage` — Rea
 
 ### Task 24 — Frontend: ProtectedRoute Component
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `src/components/layout/ProtectedRoute.tsx`. While `isLoading` is true (initial localStorage read), render nothing to prevent a flash of the login redirect. Once loaded, redirect to `/login` if not authenticated, or render the child outlet.
@@ -2082,7 +2116,7 @@ Create `src/components/layout/ProtectedRoute.tsx`. While `isLoading` is true (in
 
 ### Task 25 — Frontend: Update Router
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Update `src/routes/index.tsx` to add the public `/login` and `/register` routes, and wrap the existing main layout route with `ProtectedRoute`.
@@ -2154,7 +2188,7 @@ Update `src/routes/index.tsx` to add the public `/login` and `/register` routes,
 
 ### Task 26 — Frontend: Update Header with User Info and Logout
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Update `src/components/layout/Header.tsx` to show the logged-in user's first name and a logout button. Uses `useAuth` for the user object and the `logout` function.

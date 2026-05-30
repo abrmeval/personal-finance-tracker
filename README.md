@@ -109,8 +109,8 @@ Each module follows a strict dependency rule — dependencies point inward only:
 | Tailwind CSS | v4 (Vite plugin) | Utility-first styling |
 | TanStack Query | latest | Server state management |
 | React Hook Form + Zod | latest | Form handling and validation |
-| React Router DOM | v6 | Client-side routing |
-| Axios | latest | HTTP client with 401/refresh interceptor |
+| React Router DOM | v7 | Client-side routing |
+| Native `fetch` API | — | HTTP client with 401/refresh interceptor |
 | Recharts / Chart.js | latest | Data visualization |
 | Lucide React | latest | Icons |
 | date-fns | latest | Date utilities |
@@ -192,29 +192,36 @@ Each module follows a strict dependency rule — dependencies point inward only:
 personal-finance-tracker/
 │
 ├── backend/
-│   ├── Personal.FinanceTracker.sln
+│   ├── Personal.FinanceTracker.slnx
 │   ├── Directory.Build.props              # net10.0, TreatWarningsAsErrors, analyzers
 │   │
 │   └── src/
-│       ├── Personal.FinanceTracker.Api/   # ASP.NET 10 host, Program.cs, middleware pipeline
+│       ├── Personal.FinanceTracker.Api/   # ASP.NET 10 host — Program.cs, middleware pipeline
 │       ├── Personal.FinanceTracker.Shared/ # Shared kernel
-│       │   ├── Abstractions/Entity.cs
-│       │   ├── Exceptions/NotFoundException.cs
-│       │   ├── Middleware/ExceptionHandlingMiddleware.cs
-│       │   └── Filters/ValidationFilter.cs
-│       └── Modules/                       # Feature modules (Sprint 1+)
-│           ├── Finance/                   # Transactions, Categories, Budgets
-│           ├── Users/                     # Authentication, profiles
-│           └── Reporting/                 # Dashboard, analytics
+│       │   ├── Abstractions/              # Entity base class
+│       │   ├── Exceptions/               # NotFoundException
+│       │   ├── Extensions/               # ClaimsPrincipalExtensions
+│       │   ├── Filters/                  # ValidationFilter<T>
+│       │   ├── Middleware/               # ExceptionHandlingMiddleware
+│       │   └── Models/                   # ApiResponse<T>, ApiError, Result<T>
+│       └── Modules/
+│           ├── Users/                    # Auth — implemented (Sprint 1)
+│           │   ├── Domain/               # User, RefreshToken entities + interfaces
+│           │   ├── Application/          # DTOs, service interfaces, validators
+│           │   ├── Infrastructure/       # EF Core, repositories, services, JWT config
+│           │   └── Api/Endpoints/        # AuthEndpoints (register, login, refresh, revoke)
+│           ├── Finance/                  # Transactions, Categories, Budgets (Sprint 2–3)
+│           └── Reporting/               # Dashboard, analytics (Sprint 4)
 │
 ├── frontend/
 │   └── src/
-│       ├── api/                           # Axios client + per-resource API modules
-│       ├── components/                    # Shared UI (ui/, layout/, forms/, charts/)
-│       ├── features/                      # Feature pages (dashboard/, transactions/, ...)
-│       ├── hooks/                         # Custom React hooks (TanStack Query)
-│       ├── types/                         # TypeScript types mirroring backend DTOs
-│       └── utils/                         # Formatters, date helpers, Zod schemas
+│       ├── api/                          # Fetch-based client + per-resource API modules
+│       ├── components/                   # Shared UI (auth/, layout/)
+│       ├── features/                     # Feature pages (auth/ implemented; others Sprint 2+)
+│       ├── hooks/                        # Custom React hooks
+│       ├── routes/                       # createBrowserRouter route definitions
+│       ├── types/                        # TypeScript types mirroring backend DTOs
+│       └── utils/                        # clientLogger, documentTitle
 │
 ├── docs/
 │   ├── 01-Project-Structure.md
@@ -223,9 +230,10 @@ personal-finance-tracker/
 │   ├── 04-DevOps-Deployment.md
 │   ├── 05-Infrastructure.md
 │   ├── 06-Local-Development.md
+│   ├── DESIGN_PATTERNS.md               # Backend design patterns catalogue
 │   └── ai/
 │       ├── ui-design-rules.md
-│       └── sprints/                       # Sprint plans and execution docs
+│       └── sprints/                      # Sprint plans and execution docs
 │
 └── README.md
 ```
@@ -308,6 +316,7 @@ All documentation lives in `docs/`:
 | [04-DevOps-Deployment.md](docs/04-DevOps-Deployment.md) | GitHub Actions CI/CD, environment configuration |
 | [05-Infrastructure.md](docs/05-Infrastructure.md) | Neon PostgreSQL, environment variables, secrets |
 | [06-Local-Development.md](docs/06-Local-Development.md) | Local setup, running the stack, migrations |
+| [DESIGN_PATTERNS.md](docs/DESIGN_PATTERNS.md) | Backend design patterns catalogue (Result, Repository, Options, etc.) |
 | [ai/ui-design-rules.md](docs/ai/ui-design-rules.md) | UI component conventions and Tailwind patterns |
 | [AGENTS.md](AGENTS.md) | Coding standards, naming conventions, architecture rules |
 

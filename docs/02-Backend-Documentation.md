@@ -1,6 +1,6 @@
 # Personal Finance Tracker - Backend Documentation
 
-> **ASP.NET 8 Web API** | Minimal APIs • Entity Framework Core • FluentValidation  
+> **ASP.NET 10 Web API** | Minimal APIs • Entity Framework Core • FluentValidation  
 > Neon PostgreSQL • OpenTelemetry • TickerQ
 
 ---
@@ -9,9 +9,9 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Framework** | ASP.NET 8 | Web API runtime |
+| **Framework** | ASP.NET 10 | Web API runtime |
 | **API Style** | Minimal APIs | Lightweight, fast endpoints |
-| **ORM** | Entity Framework Core 8 | Database access |
+| **ORM** | Entity Framework Core 9 | Database access |
 | **Database** | Neon PostgreSQL | Serverless Postgres |
 | **Validation** | FluentValidation | Request validation |
 | **Scheduling** | TickerQ | Background jobs |
@@ -24,7 +24,7 @@
 
 ### Why Minimal APIs?
 
-Minimal APIs in ASP.NET 8 provide a lightweight alternative to MVC controllers:
+Minimal APIs in ASP.NET 10 provide a lightweight alternative to MVC controllers:
 
 - **Less boilerplate**: No controller classes needed
 - **Better performance**: Reduced overhead
@@ -577,39 +577,56 @@ public class CreateBudgetValidator : AbstractValidator<CreateBudgetRequest>
 
 ### Validation Filter for Minimal APIs
 
-```csharp
-// Shared/Validation/ValidationFilter.cs
+The `ValidationFilter<T>` requires the validator to be registered in DI — it uses constructor injection, not `GetService`. It returns `ApiResponse<object>` shaped responses on failure (consistent with the rest of the API), not raw `ValidationProblem`.
 
-public class ValidationFilter<T> : IEndpointFilter where T : class
+```csharp
+// Shared/Filters/ValidationFilter.cs
+
+public sealed class ValidationFilter<T>(IValidator<T> validator) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
     {
-        var validator = context.HttpContext.RequestServices
-            .GetService<IValidator<T>>();
-
-        if (validator is null)
-            return await next(context);
-
-        var argument = context.Arguments
-            .OfType<T>()
-            .FirstOrDefault();
+        var argument = context.Arguments.OfType<T>().FirstOrDefault();
 
         if (argument is null)
-            return await next(context);
+            return TypedResults.BadRequest(new ApiResponse<object>
+            {
+                IsOk = false,
+                Error = new ApiError
+                {
+                    Title = "Validation Failed",
+                    Status = StatusCodes.Status400BadRequest,
+                    Detail = "Request body is missing or invalid.",
+                    Instance = context.HttpContext.Request.Path,
+                },
+                StatusCode = StatusCodes.Status400BadRequest,
+                CodeText = "Bad Request"
+            });
 
-        var validationResult = await validator.ValidateAsync(argument);
+        var result = await validator.ValidateAsync(argument);
 
-        if (!validationResult.IsValid)
+        if (!result.IsValid)
         {
-            var errors = validationResult.Errors
+            var errors = result.Errors
                 .GroupBy(e => e.PropertyName)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.Select(e => e.ErrorMessage).ToArray());
+                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
 
-            return Results.ValidationProblem(errors);
+            return TypedResults.BadRequest(new ApiResponse<object>
+            {
+                IsOk = false,
+                Error = new ApiError
+                {
+                    Title = "Validation Failed",
+                    Status = StatusCodes.Status400BadRequest,
+                    Detail = "One or more validation errors occurred.",
+                    Instance = context.HttpContext.Request.Path,
+                    ModelErrors = errors
+                },
+                StatusCode = StatusCodes.Status400BadRequest,
+                CodeText = "Bad Request"
+            });
         }
 
         return await next(context);
@@ -620,6 +637,49 @@ public class ValidationFilter<T> : IEndpointFilter where T : class
 ---
 
 ## 6. Services Layer
+
+### Result Pattern
+
+Services return `Result<T>` instead of nullable types or throwing exceptions for expected failures. This makes success/failure explicit at the call site and allows endpoints to inspect the outcome without catching exceptions.
+
+```csharp
+// Shared/Models/Result.cs
+
+public class Result<T>
+{
+    public bool IsSuccess { get; init; }
+    public bool IsFailure => !IsSuccess;
+    public T? Value { get; init; }
+    public ErrorResult? Error { get; init; }
+
+    public static Result<T> Success(T value) =>
+        new() { IsSuccess = true, Value = value, Error = ErrorResult.None };
+
+    public static Result<T> Failure(ErrorResult error) =>
+        new() { IsSuccess = false, Error = error };
+}
+
+public sealed record ErrorResult(string Code, string Description)
+{
+    public static readonly ErrorResult None = new(string.Empty, string.Empty);
+}
+```
+
+**Usage pattern in endpoints:**
+
+```csharp
+var result = await userService.RegisterAsync(request, ct);
+
+if (result.IsFailure)
+    return TypedResults.Conflict(new ApiResponse<AuthResponse>
+    {
+        IsOk = false,
+        Error = new ApiError { Detail = result.Error?.Description, ... },
+        ...
+    });
+
+return TypedResults.Ok(new ApiResponse<AuthResponse> { IsOk = true, Data = result.Value, ... });
+```
 
 ### Transaction Service
 
@@ -873,46 +933,82 @@ public class TransactionRepository : ITransactionRepository
 
 ## 8. Authentication & Authorization
 
-### JWT Configuration
+### JWT Configuration Pattern
+
+JWT configuration uses the **Options pattern** rather than reading `IConfiguration` strings directly. This gives strongly-typed access and is more testable.
 
 ```csharp
-// backend/src/PersonalFinanceTracker.Api/Configuration/AuthenticationConfiguration.cs
+// Users/Infrastructure/Configuration/JwtSettings.cs
 
-public static class AuthenticationConfiguration
+public sealed class JwtSettings : IJwtSettings
 {
-    public static IServiceCollection AddJwtAuthentication(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()!;
+    public const string SectionName = "Jwt";
+    public string SecretKey { get; init; } = string.Empty;
+    public string Issuer { get; init; } = string.Empty;
+    public string Audience { get; init; } = string.Empty;
+    public int ExpiryMinutes { get; init; } = 60;
+    public int RefreshTokenExpiryDays { get; init; } = 7;
+}
 
-        services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
-        {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-                ClockSkew = TimeSpan.Zero
-            };
-        });
+// Users/Application/Interfaces/IJwtSettings.cs
 
-        services.AddAuthorization();
-
-        return services;
-    }
+public interface IJwtSettings
+{
+    string SecretKey { get; }
+    string Issuer { get; }
+    string Audience { get; }
+    int ExpiryMinutes { get; }
+    int RefreshTokenExpiryDays { get; }
 }
 ```
+
+Registration in `DependencyInjection.cs`:
+
+```csharp
+services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+services.AddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
+```
+
+JWT authentication middleware is registered globally in `Program.cs` using the same settings:
+
+```csharp
+// Program.cs
+
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+```
+
+### appsettings.json — Jwt section
+
+```json
+{
+  "Jwt": {
+    "SecretKey": "<secret>",
+    "Issuer": "<issuer>",
+    "Audience": "<audience>",
+    "ExpiryMinutes": 60,
+    "RefreshTokenExpiryDays": 7
+  }
+}
+```
+
+> Use `appsettings.Local.json` (gitignored) for local development secrets. Never commit real values.
 
 ### User Claims Extension
 
@@ -923,16 +1019,16 @@ public static class ClaimsPrincipalExtensions
 {
     public static Guid GetUserId(this ClaimsPrincipal user)
     {
-        var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException("User ID claim not found");
+        var claim = user.FindFirst(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException("User ID claim not found.");
 
-        return Guid.Parse(userIdClaim.Value);
+        return Guid.Parse(claim.Value);
     }
 
     public static string GetEmail(this ClaimsPrincipal user)
     {
         return user.FindFirst(ClaimTypes.Email)?.Value
-            ?? throw new UnauthorizedAccessException("Email claim not found");
+            ?? throw new UnauthorizedAccessException("Email claim not found.");
     }
 }
 ```
@@ -1178,19 +1274,18 @@ public class ExceptionHandlingMiddleware
 ### Creating Migrations
 
 ```bash
-# Navigate to the module directory
-cd backend/src/Modules/Finance
-
-# Create a migration
-dotnet ef migrations add InitialCreate \
-  --context FinanceDbContext \
-  --output-dir Infrastructure/Migrations \
-  --startup-project ../../PersonalFinanceTracker.Api
+# From backend/ directory
+dotnet ef migrations add InitialUsersSchema \
+  --project src/Modules/Users/Personal.FinanceTracker.Users.csproj \
+  --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj \
+  --context UsersDbContext \
+  --output-dir Infrastructure/Data/Migrations
 
 # Apply migrations
 dotnet ef database update \
-  --context FinanceDbContext \
-  --startup-project ../../PersonalFinanceTracker.Api
+  --project src/Modules/Users/Personal.FinanceTracker.Users.csproj \
+  --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj \
+  --context UsersDbContext
 ```
 
 ### Migration in Code (Program.cs)
