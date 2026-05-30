@@ -4,30 +4,31 @@ using Microsoft.OpenApi;
 using Personal.FinanceTracker.Shared.Middleware;
 using Personal.FinanceTracker.Users;
 using Personal.FinanceTracker.Users.Infrastructure.Data;
-
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Services ───────────────────────────────────────────────────    
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
 
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Personal Finance Tracker API", Version = "v1" });
+// builder.Services.AddSwaggerGen(c =>
+// {
+//     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Personal Finance Tracker API", Version = "v1" });
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header
-    });
-    c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("Bearer")] = []
-    });
-});
+//     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+//     {
+//         Name = "Authorization",
+//         Type = SecuritySchemeType.Http,
+//         Scheme = "bearer",
+//         BearerFormat = "JWT",
+//         In = ParameterLocation.Header
+//     });
+//     c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+//     {
+//         [new OpenApiSecuritySchemeReference("Bearer")] = []
+//     });
+// });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddJwtBearer(options =>
@@ -71,8 +72,10 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    // app.UseSwagger();
+    // app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.UseHttpsRedirection();
@@ -82,6 +85,13 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
+
+app.MapScalarApiReference(options =>
+{
+    options.Title = "Personal Finance Tracker API Reference";
+    options.Theme = ScalarTheme.BluePlanet;
+    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
 
 app.MapUsersEndpoints();
 
