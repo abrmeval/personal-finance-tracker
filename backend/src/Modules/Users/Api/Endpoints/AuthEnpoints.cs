@@ -41,6 +41,7 @@ public static class AuthEndpoints
             .RequireAuthorization();
         return app;
     }
+
     private static async Task<Results<Ok<ApiResponse<AuthResponse>>, Conflict<ApiResponse<AuthResponse>>>> RegisterAsync(
         RegisterRequest request,
         IUserService userService,
@@ -48,8 +49,8 @@ public static class AuthEndpoints
         CancellationToken ct)
     {
         var result = await userService.RegisterAsync(request, ct);
-        
-        if (result is null)
+
+        if (result.IsFailure)
             return TypedResults.Conflict(new ApiResponse<AuthResponse>
             {
                 IsOk = false,
@@ -57,17 +58,17 @@ public static class AuthEndpoints
                 {
                     Title = "Registration Failed",
                     Status = StatusCodes.Status409Conflict,
-                    Detail = "An account with this email address already exists.",
+                    Detail = result.Error?.Description,
                     Instance = httpContext.Request.Path,
                 },
-                StatusCode =StatusCodes.Status409Conflict,
-                CodeText = "Conflict"
+                StatusCode = StatusCodes.Status409Conflict,
+                CodeText = "CONFLICT"
             });
 
         return TypedResults.Ok(new ApiResponse<AuthResponse>
         {
             IsOk = true,
-            Data = result,
+            Data = result.Value,
             StatusCode = StatusCodes.Status200OK,
             CodeText = "OK"
         });
@@ -81,7 +82,7 @@ public static class AuthEndpoints
     {
         var result = await userService.LoginAsync(request, ct);
 
-        if (result is null)
+        if (result.IsFailure)
             return TypedResults.Json(new ApiResponse<AuthResponse>
             {
                 IsOk = false,
@@ -89,17 +90,17 @@ public static class AuthEndpoints
                 {
                     Title = "Authentication Failed",
                     Status = StatusCodes.Status401Unauthorized,
-                    Detail = "Invalid email or password.",
+                    Detail = result.Error?.Description,
                     Instance = httpContext.Request.Path,
                 },
                 StatusCode = StatusCodes.Status401Unauthorized,
-                CodeText = "Unauthorized"
+                CodeText = "UNAUTHORIZED"
             }, statusCode: StatusCodes.Status401Unauthorized);
 
         return TypedResults.Ok(new ApiResponse<AuthResponse>
         {
             IsOk = true,
-            Data = result,
+            Data = result.Value,
             StatusCode = StatusCodes.Status200OK,
             CodeText = "OK"
         });
@@ -112,8 +113,8 @@ public static class AuthEndpoints
         CancellationToken ct)
     {
         var result = await userService.RefreshTokenAsync(request.RefreshToken, ct);
-        
-        if (result is null)
+
+        if (result.IsFailure)
             return TypedResults.Json(new ApiResponse<AuthResponse>
             {
                 IsOk = false,
@@ -121,17 +122,17 @@ public static class AuthEndpoints
                 {
                     Title = "Refresh Token Failed",
                     Status = StatusCodes.Status401Unauthorized,
-                    Detail = "Invalid refresh token or token has expired.",
-                    Instance = httpContext.Request.Path,
+                    Detail = result.Error?.Description,
+                    Instance = httpContext.Request.Path,                   
                 },
                 StatusCode = StatusCodes.Status401Unauthorized,
-                CodeText = "Unauthorized"
+                CodeText = "UNAUTHORIZED"
             }, statusCode: StatusCodes.Status401Unauthorized);
 
         return TypedResults.Ok(new ApiResponse<AuthResponse>
         {
             IsOk = true,
-            Data = result,
+            Data = result.Value,
             StatusCode = StatusCodes.Status200OK,
             CodeText = "OK"
         });
@@ -145,9 +146,9 @@ public static class AuthEndpoints
         CancellationToken ct)
     {
         var userId = claimsPrincipal.GetUserId();
-        var success = await userService.RevokeTokenAsync(userId, request.RefreshToken, ct);
+        var result = await userService.RevokeTokenAsync(userId, request.RefreshToken, ct);
 
-        if (!success)
+        if (result.IsFailure)
             return TypedResults.Json(new ApiResponse<AuthResponse>
             {
                 IsOk = false,
@@ -155,11 +156,11 @@ public static class AuthEndpoints
                 {
                     Title = "Revocation Failed",
                     Status = StatusCodes.Status401Unauthorized,
-                    Detail = "Invalid refresh token or token does not belong to the user.",
+                    Detail = result.Error?.Description,
                     Instance = httpContext.Request.Path,
                 },
                 StatusCode = StatusCodes.Status401Unauthorized,
-                CodeText = "Unauthorized"
+                CodeText = "UNAUTHORIZED"
             }, statusCode: StatusCodes.Status401Unauthorized);
 
         return TypedResults.NoContent();

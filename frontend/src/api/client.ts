@@ -12,7 +12,7 @@ async function refreshAccessToken(): Promise<string> {
 
   if (!storedRefreshToken) {
     throw new ApiError(
-      "No refresh token available.",
+      "Please log in again.",
       "No refresh token available.",
       "[refreshAccessToken]",
       "/auth/refresh",
@@ -28,7 +28,7 @@ async function refreshAccessToken(): Promise<string> {
 
   if (!response.ok) {
     throw new ApiError(
-      "Token refresh failed",
+      "Unauthorized. Please log in again.",
       response.statusText,
       "[refreshAccessToken]",
       "/auth/refresh",
@@ -46,7 +46,7 @@ async function getValidAccessToken(): Promise<string | null> {
   return token;
 }
 
-async function parseResponse<T>(
+async function parseResponseAsync<T>(
   response: Response,
   path?: string,
 ): Promise<ApiResponse<T>> {
@@ -59,20 +59,19 @@ async function parseResponse<T>(
     } as ApiResponse<T>;
   }
 
-  let responseBody;
-  try {
-    responseBody = (await response.json()) as ApiResponse<T>;
-  } catch (error) {
-    throw new ApiError(
-      "Parsing error",
-      error instanceof Error ? error.message : String(error),
-      "[parseResponse]",
-      path,
-      AppStatusCode.ParseError,
-    );
-  }
+  const responseBody = (await response.json()) as ApiResponse<T>;
 
   if (!response.ok) {
+    if (response.status >= AppStatusCode.InternalServerError) {
+      throw new ApiError(
+        "An unexpected error occurred while processing the request.",
+        responseBody?.error?.message || response.statusText,
+        "[parseResponse]",
+        path,
+        response?.status,
+      );
+    }
+
     //loging the error response for debugging
     const log = {
       message: "API response error.",
@@ -81,10 +80,10 @@ async function parseResponse<T>(
       path: responseBody.error?.instance || path,
     } as ClientLogEntry;
 
-    if (response.status >= 500) ClientLogger.LogError(log);
-    else if (response.status >= 400) ClientLogger.LogWarning(log);
-    else ClientLogger.LogInfo(log);
+    if (response.status >= AppStatusCode.BadRequest) ClientLogger.LogWarning(log);
+     else ClientLogger.LogInfo(log);
   }
+
   return responseBody;
 }
 
@@ -130,20 +129,21 @@ async function request<T>(
       // If the retried request also fails with 401, throw an error to trigger logout
       if (retried.status === AppStatusCode.Unauthorized) {
         throw new ApiError(
-          "Retried request failed",
+          "That was an unauthorized request. Please log in again.",
           retried.statusText,
           "[request]",
           path,
           retried.status,
         );
       }
-      return parseResponse<T>(retried);
+      return await parseResponseAsync<T>(retried);
     }
-    return parseResponse<T>(response);
+    return await parseResponseAsync<T>(response);
   } catch (error) {
+    console.error("Error in API request:", error);
     if (error instanceof TypeError) {
       const apiError = new ApiError(
-        "Network error or CORS issue.",
+        "There was a network error.",
         error.message,
         "[request]",
         path,
@@ -155,27 +155,31 @@ async function request<T>(
         statusCode: AppStatusCode.NetworkError,
         originalMessage: error.message,
         path: apiError.instance,
+        context: apiError.context,
       });
       throw apiError;
     }
 
     if (error instanceof ApiError) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      if (error.status === AppStatusCode.Unauthorized) {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+      }
 
       ClientLogger.LogError({
         message: error.title,
-        statusCode: AppStatusCode.NetworkError,
+        statusCode: error.status,
         originalMessage: error.message,
         path: error.instance,
+        context: error.context,
       });
       throw error;
     }
 
     const apiError = new ApiError(
-      "An unexpected error occurred",
+      "An unexpected error occurred.",
       error instanceof Error ? error.message : String(error),
       "[request]",
       path,
@@ -187,6 +191,7 @@ async function request<T>(
       statusCode: response?.status,
       originalMessage: apiError.message,
       path: apiError.instance,
+      context: apiError.context,
     });
     throw apiError;
   }

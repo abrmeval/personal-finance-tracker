@@ -7,11 +7,15 @@ import { loginSchema } from "@/features/auth/schemas";
 import type { LoginFormData } from "@/features/auth/schemas";
 import { ApiError, AppStatusCode } from "@/types/http";
 import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
+import { setDocumentTitle } from "@/utils/documentTitle";
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [modelErrors, setModelErrors] = useState<Record<string, string[]> | null>(null);
+
+  setDocumentTitle("Login page");
 
   useEffect(() => {
     if (isAuthenticated) navigate("/", { replace: true });
@@ -27,12 +31,18 @@ export function LoginPage() {
 
   async function onSubmit(data: LoginFormData) {
     setServerError(null);
+    setModelErrors(null);
+
     try {
       await login(data);
       navigate("/", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setServerError(error.title);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
       } else {
         ClientLogger.LogError({
           message: "Unexpected error during login",
@@ -81,6 +91,13 @@ export function LoginPage() {
                 {errors.email.message}
               </p>
             )}
+
+            {modelErrors?.email &&
+              modelErrors.email.map((msg, idx) => (
+                <p key={idx} className="text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
           </div>
           <div>
             <label
@@ -102,6 +119,12 @@ export function LoginPage() {
                 {errors.password.message}
               </p>
             )}
+            {modelErrors?.password &&
+              modelErrors.password.map((msg, idx) => (
+                <p key={idx} className="text-xs text-red-600">
+                  {msg}
+                </p>
+              ))}
           </div>
           <button
             type="submit"

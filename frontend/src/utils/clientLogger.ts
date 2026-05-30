@@ -18,7 +18,7 @@ export class ClientLogger {
     originalMessage,
     path,
     context,
-    shouldLogEvent = import.meta.env.MODE !== "production",
+    shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",
   }: ClientLogEntry) {
     if (!shouldLogEvent) return;
 
@@ -37,7 +37,7 @@ export class ClientLogger {
     originalMessage,
     path,
     context,
-    shouldLogEvent = import.meta.env.MODE !== "production",
+    shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",
   }: ClientLogEntry) {
     if (!shouldLogEvent) return;
 
@@ -57,7 +57,7 @@ export class ClientLogger {
     originalMessage,
     path,
     context,
-    shouldLogEvent = import.meta.env.MODE !== "production",
+    shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",
   }: ClientLogEntry) {
     if (!shouldLogEvent) return;
 
