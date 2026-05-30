@@ -7,12 +7,8 @@ using Personal.FinanceTracker.Users.Infrastructure.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
-// ── Services ───────────────────────────────────────────────────
 
-// Temporary — will be replaced by AddUsersModule in Task 15
-builder.Services.AddDbContext<UsersDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-    
+// ── Services ───────────────────────────────────────────────────    
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -60,9 +56,9 @@ builder.Services.AddCors(options =>
               .AllowCredentials()));
 
 builder.Services.AddHealthChecks();
-    // .AddNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")!)  // enable in Sprint 1
+// .AddNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")!)  // enable in Sprint 1
 
- builder.Services.AddUsersModule(builder.Configuration);
+builder.Services.AddUsersModule(builder.Configuration);
 // TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
 // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
 
@@ -88,7 +84,7 @@ app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
 
 app.MapUsersEndpoints();
-// TODO Sprint 1: builder.Services.AddUsersModule(builder.Configuration);
+
 // TODO Sprint 2: app.MapFinanceEndpoints();
 // TODO Sprint 4: app.MapReportingEndpoints();
 
