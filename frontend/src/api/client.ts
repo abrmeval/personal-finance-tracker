@@ -1,6 +1,6 @@
 import type { AuthResponse } from "@/types/auth";
 import { AppStatusCode, ApiError, type ApiResponse } from "@/types/http";
-import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
+import { ClientLogger } from "@/utils/clientLogger";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "/api";
 
@@ -35,10 +35,13 @@ async function refreshAccessToken(): Promise<string> {
       response.status,
     );
   }
-  const data = (await response.json()) as AuthResponse;
-  localStorage.setItem("accessToken", data.accessToken);
-  localStorage.setItem("refreshToken", data.refreshToken);
-  return data.accessToken;
+  const responseBody = (await response.json()) as ApiResponse<AuthResponse>;
+
+  if (!responseBody.data) return "";
+
+  localStorage.setItem("accessToken", responseBody.data.accessToken);
+  localStorage.setItem("refreshToken", responseBody.data.refreshToken);
+  return responseBody.data.accessToken;
 }
 
 async function getValidAccessToken(): Promise<string | null> {
@@ -62,26 +65,13 @@ async function parseResponseAsync<T>(
   const responseBody = (await response.json()) as ApiResponse<T>;
 
   if (!response.ok) {
-    if (response.status >= AppStatusCode.InternalServerError) {
-      throw new ApiError(
-        "An unexpected error occurred while processing the request.",
-        responseBody?.error?.message || response.statusText,
-        "[parseResponse]",
-        path,
-        response?.status,
-      );
-    }
-
-    //loging the error response for debugging
-    const log = {
-      message: "API response error.",
-      statusCode: response.status,
-      originalMessage: responseBody?.error?.message,
-      path: responseBody.error?.instance || path,
-    } as ClientLogEntry;
-
-    if (response.status >= AppStatusCode.BadRequest) ClientLogger.LogWarning(log);
-     else ClientLogger.LogInfo(log);
+    throw new ApiError(
+      responseBody.error?.title || "Error",
+      responseBody.error?.message || response.statusText,
+      "[parseResponse]",
+      path,
+      response?.status,
+    );
   }
 
   return responseBody;
@@ -150,7 +140,7 @@ async function request<T>(
         AppStatusCode.NetworkError,
       );
 
-      ClientLogger.LogError({
+      ClientLogger.LogWarning({
         message: apiError.title,
         statusCode: AppStatusCode.NetworkError,
         originalMessage: error.message,

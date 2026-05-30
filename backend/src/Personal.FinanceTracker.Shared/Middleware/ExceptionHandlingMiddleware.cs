@@ -31,10 +31,10 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
     {
         var (statusCode, title) = exception switch
         {
-            NotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
-            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
-            FluentValidation.ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
-            _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+            NotFoundException => (StatusCodes.Status404NotFound, "The requested resource was not found."),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Not authorized to access this resource."),
+            FluentValidation.ValidationException => (StatusCodes.Status400BadRequest, "The request is invalid."),
+            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred while processing the request.")
         };
 
         var apiError = new ApiError
