@@ -27,6 +27,7 @@ export class ApiError extends Error {
   instance?: string;
   modelErrors?: Record<string, string[]> | null;
   status?: number;
+  detail: string;
 
   /**
    * Creates a new instance of the ApiError class.
@@ -51,6 +52,7 @@ export class ApiError extends Error {
     this.instance = instance;
     this.modelErrors = modelErrors;
     this.title = title;
+    this.detail = detail;
     this.status = status;
   }
 }

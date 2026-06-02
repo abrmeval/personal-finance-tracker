@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Personal.FinanceTracker.Shared.Constants;
 using Personal.FinanceTracker.Shared.Models;
 using Personal.FinanceTracker.Users.Application.DTOs.Requests;
 using Personal.FinanceTracker.Users.Application.DTOs.Responses;
@@ -21,7 +22,7 @@ public sealed class UserService(
         if (await repository.EmailExistsAsync(request.Email, ct))
         {
             logger.LogWarning("Registration attempted with existing email {Email}", request.Email);
-            return Result<AuthResponse>.Failure(new("RESOURCE_ALREADY_EXISTS", "An account with this email already exists."));
+            return Result<AuthResponse>.Failure(new(ApiErrorCode.ResourceAlreadyExists, "An account with this email already exists."));
         }
         // Hash the password using BCrypt and create the user entity
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
@@ -46,7 +47,7 @@ public sealed class UserService(
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             logger.LogWarning("Failed login attempt for email {Email}", request.Email);
-            return Result<AuthResponse>.Failure(new("INVALID_CREDENTIALS", "Invalid email or password."));
+            return Result<AuthResponse>.Failure(new(ApiErrorCode.InvalidCredentials, "Invalid email or password."));
         }
         var refreshTokenValue = tokenService.GenerateRefreshToken();
         var refreshTokenExpiry = GetRefreshTokenExpiry();
@@ -66,12 +67,12 @@ public sealed class UserService(
         if (storedToken is null || !storedToken.IsActive)
         {
             logger.LogWarning("Invalid or expired refresh token used");
-            return Result<AuthResponse>.Failure(new("INVALID_TOKEN", "Invalid or expired refresh token."));
+            return Result<AuthResponse>.Failure(new(ApiErrorCode.InvalidToken, "Invalid or expired refresh token."));
         }
         var user = await repository.GetByIdAsync(storedToken.UserId, ct);
 
         if (user is null)
-            return Result<AuthResponse>.Failure(new("RESOURCE_NOT_FOUND", "User not found."));
+            return Result<AuthResponse>.Failure(new(ApiErrorCode.ResourceNotFound, "User not found."));
 
         storedToken.Revoke();
 
@@ -90,7 +91,7 @@ public sealed class UserService(
         var storedToken = await repository.GetRefreshTokenAsync(refreshToken, ct);
 
         if (storedToken is null || storedToken.UserId != userId || !storedToken.IsActive)
-            return Result<bool>.Failure(new("INVALID_TOKEN", "The token is invalid or has already been revoked."));
+            return Result<bool>.Failure(new(ApiErrorCode.InvalidToken, "The token is invalid or has already been revoked."));
 
         storedToken.Revoke();
         await repository.SaveChangesAsync(ct);

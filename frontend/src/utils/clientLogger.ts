@@ -1,7 +1,7 @@
 export interface ClientLogEntry {
   message: string;
   statusCode?: number;
-  originalMessage?: string;
+  details?: string;
   path?: string;
   context?: string;
   shouldLogEvent?: boolean;
@@ -15,7 +15,7 @@ export class ClientLogger {
   static LogInfo({
     message,
     statusCode,
-    originalMessage,
+    details: originalMessage,
     path,
     context,
     shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",
@@ -34,7 +34,7 @@ export class ClientLogger {
  static LogWarning({
     message,
     statusCode,
-    originalMessage,
+    details: originalMessage,
     path,
     context,
     shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",
@@ -54,7 +54,7 @@ export class ClientLogger {
  static LogError({
     message,
     statusCode,
-    originalMessage,
+    details: originalMessage,
     path,
     context,
     shouldLogEvent = import.meta.env.VITE_ENVIRONMENT !== "production",

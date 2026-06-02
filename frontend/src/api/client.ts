@@ -67,7 +67,7 @@ async function parseResponseAsync<T>(
   if (!response.ok) {
     throw new ApiError(
       responseBody.error?.title || "Error",
-      responseBody.error?.message || response.statusText,
+      responseBody.error?.detail || response.statusText,
       "[parseResponse]",
       path,
       response?.status,
@@ -80,20 +80,28 @@ async function parseResponseAsync<T>(
 async function request<T>(
   path: string,
   options: RequestInit = {},
+  anonymous : boolean = false,
   retry = true,
 ): Promise<ApiResponse<T>> {
-  const token = await getValidAccessToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
 
   let response;
 
   try {
+    // If the request is marked as anonymous, skip attaching tokens and directly make the request
+    if (anonymous) {
+      response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+      return await parseResponseAsync<T>(response, path);
+    }
+
+    const token = await getValidAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     //First fetch attempt
     response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
@@ -130,7 +138,6 @@ async function request<T>(
     }
     return await parseResponseAsync<T>(response);
   } catch (error) {
-    console.error("Error in API request:", error);
     if (error instanceof TypeError) {
       const apiError = new ApiError(
         "There was a network error.",
@@ -143,7 +150,7 @@ async function request<T>(
       ClientLogger.LogWarning({
         message: apiError.title,
         statusCode: AppStatusCode.NetworkError,
-        originalMessage: error.message,
+        details: error.message,
         path: apiError.instance,
         context: apiError.context,
       });
@@ -155,13 +162,15 @@ async function request<T>(
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
-        window.location.href = "/login";
+
+        if(!anonymous)
+          window.location.href = "/login";
       }
 
       ClientLogger.LogError({
         message: error.title,
         statusCode: error.status,
-        originalMessage: error.message,
+        details: error.detail,
         path: error.instance,
         context: error.context,
       });
@@ -179,7 +188,7 @@ async function request<T>(
     ClientLogger.LogError({
       message: apiError.title,
       statusCode: response?.status,
-      originalMessage: apiError.message,
+      details: apiError.message,
       path: apiError.instance,
       context: apiError.context,
     });
@@ -188,9 +197,10 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  get: <T>(path: string, anonymous?: boolean) =>
+    request<T>(path, { method: "GET" }, anonymous),
+  post: <T>(path: string, body?: unknown, anonymous?: boolean) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body) }, anonymous),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>

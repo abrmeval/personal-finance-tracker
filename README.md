@@ -265,13 +265,13 @@ dotnet format backend/
 
 # Add a migration (once Finance module exists)
 dotnet ef migrations add <MigrationName> \
-  --context FinanceDbContext \
-  --project backend/src/Modules/Finance \
+  --context <DbContext> \
+  --project backend/src/Modules/<ProjectName> \
   --startup-project backend/src/Personal.FinanceTracker.Api
 
 # Apply migrations
 dotnet ef database update \
-  --context FinanceDbContext \
+  --context <DbContext> \
   --startup-project backend/src/Personal.FinanceTracker.Api
 ```
 

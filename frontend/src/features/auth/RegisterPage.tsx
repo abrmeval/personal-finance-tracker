@@ -12,11 +12,12 @@ import { setDocumentTitle } from "@/utils/documentTitle";
 export function RegisterPage() {
   const { register: registerUser, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [modelErrors, setModelErrors] = useState<Record<
     string,
     string[]
   > | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   setDocumentTitle("Register page");
 
@@ -33,8 +34,9 @@ export function RegisterPage() {
   });
 
   async function onSubmit(data: RegisterFormData) {
-    setServerError(null);
+    setErrorTitle(null);
     setModelErrors(null);
+    setErrorDetails(null);
 
     try {
       await registerUser({
@@ -46,7 +48,8 @@ export function RegisterPage() {
       navigate("/", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
-        setServerError(error.title);
+        setErrorTitle(error.title);
+        setErrorDetails(error.detail);
 
         if (error.modelErrors) {
           setModelErrors(error.modelErrors);
@@ -54,12 +57,12 @@ export function RegisterPage() {
       } else {
         ClientLogger.LogError({
           message: "Unexpected error during registration",
-          error: error instanceof Error ? error : String(error),
+          details: error instanceof Error ? error.message : String(error),
           context: "[onSubmit]",
           path: "/auth/register",
           statusCode: AppStatusCode.ClientError,
         } as ClientLogEntry);
-        setServerError("An unexpected error occurred. Please try again.");
+        setErrorTitle("An unexpected error occurred. Please try again.");
       }
     }
   }
@@ -72,9 +75,12 @@ export function RegisterPage() {
         <p className="text-sm text-gray-500 mb-6">
           Start tracking your finances today
         </p>
-        {serverError && (
+        {errorTitle && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {serverError}
+            {errorTitle}
+            {errorDetails && (
+              <p className="mt-1 text-xs text-red-600">{errorDetails}</p>
+            )}
           </div>
         )}
         <form
