@@ -57,7 +57,6 @@ builder.Services.AddCors(options =>
               .AllowCredentials()));
 
 builder.Services.AddHealthChecks();
-// .AddNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")!)  // enable in Sprint 1
 
 builder.Services.AddUsersModule(builder.Configuration);
 // TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
