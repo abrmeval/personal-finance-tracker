@@ -1,0 +1,5 @@
+- Add security measures to secure JWT tokens and sensitive data in the Personal Finance Tracker project
+-  Add CI/CD pipeline to automate build, test, and deployment processes for the Personal Finance Tracker project
+- Terraform scripts to provision and manage cloud infrastructure for the Personal Finance Tracker project
+- API gateway configuration to manage and secure API endpoints for the Personal Finance Tracker project (e.g., rate limiting, authentication, logging)
+- Choose a cloud provider (AWS, Azure, GCP) and set up the necessary services (e.g., compute, storage, database) for the Personal Finance Tracker project

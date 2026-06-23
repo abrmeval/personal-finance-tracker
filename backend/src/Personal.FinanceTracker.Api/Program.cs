@@ -59,7 +59,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 builder.Services.AddUsersModule(builder.Configuration);
-// TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
+// builder.Services.AddFinanceModule(builder.Configuration);
 // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
 
 // TODO Sprint 6: builder.Services.AddOpenTelemetry(...)
@@ -93,8 +93,8 @@ app.MapScalarApiReference(options =>
 });
 
 app.MapUsersEndpoints();
+// app.MapFinanceEndpoints();
 
-// TODO Sprint 2: app.MapFinanceEndpoints();
 // TODO Sprint 4: app.MapReportingEndpoints();
 
 app.Run();

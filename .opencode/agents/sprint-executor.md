@@ -14,7 +14,7 @@ description: |
   - User says 'I have a sprint plan from the sprint planner, please execute it' → invoke this agent to work through all sprint tasks
   - User provides sprint definition with tasks and asks 'please execute these tasks' → invoke this agent to manage status transitions and complete the work
   - After sprint planning is complete, user says 'now run the sprint' → invoke this agent to begin execution and track progress through task completion
-model: github-copilot/gpt-4.1
+model: opencode-go/kimi-k2.7-code
 permission:
   read: allow
   edit: allow

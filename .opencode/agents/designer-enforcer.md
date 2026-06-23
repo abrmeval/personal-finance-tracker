@@ -16,7 +16,7 @@ description: |
   - After a sprint executor completes work: 'invoke designer-enforcer to verify the sprint output'
   - User asks 'does my new feature follow the project conventions?' → invoke this agent
   - After a refactor: 'check if my changes meet the architecture requirements'
-model: github-copilot/claude-sonnet-4.6
+model: opencode-go/glm-5.2
 permission:
   read: allow
   glob: allow
