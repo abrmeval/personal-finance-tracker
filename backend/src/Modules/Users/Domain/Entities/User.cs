@@ -7,6 +7,7 @@ public sealed class User : Entity
     public string PasswordHash { get; private set; } = string.Empty;
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
+    public bool IsActive { get; private set; } = true;
     private User() { }
     
     public static User Create(

@@ -10,4 +10,7 @@ public static class ApiErrorCode
     public const string InvalidCredentials = "INVALID_CREDENTIALS";
     public const string InvalidToken = "INVALID_TOKEN";
     public const string ResourceNotFound = "RESOURCE_NOT_FOUND";
+    public const string CategoryNotFound = "CATEGORY_NOT_FOUND";
+    public const string TransactionNotFound = "TRANSACTION_NOT_FOUND";
+    public const string DuplicateCategoryName = "DUPLICATE_CATEGORY_NAME";
 }

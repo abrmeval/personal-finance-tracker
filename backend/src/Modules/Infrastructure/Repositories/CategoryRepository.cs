@@ -31,6 +31,12 @@ public sealed class CategoryRepository(FinanceDbContext context) : ICategoryRepo
     public async Task AddAsync(Category category, CancellationToken ct = default)
         => await context.Categories.AddAsync(category, ct);
 
+    public Task DeleteAsync(Category category, CancellationToken ct = default)
+    {
+        context.Categories.IsActive = false;
+        context.UpdatedAt = DateTime.UtcNow;
+        return Task.CompletedTask;
+    }
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);
 }

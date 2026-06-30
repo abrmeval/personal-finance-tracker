@@ -8,6 +8,7 @@ public sealed class Category : Entity
     public string Name { get; private set; } = string.Empty;
     public string? Icon { get; private set; }
     public string? Color { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     private Category() { }
 
