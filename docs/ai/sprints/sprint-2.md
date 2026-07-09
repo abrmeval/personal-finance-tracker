@@ -1477,7 +1477,7 @@ Create the category service interface in the Application layer and its implement
 - `DeleteAsync` is added to both `ICategoryRepository` and `CategoryRepository`
 
 ---
-
+### CONTINUE HERE : 29/06/2026
 ### Task 19 — ITransactionService and TransactionService
 
 **Status:** New
