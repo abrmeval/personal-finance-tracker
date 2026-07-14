@@ -180,7 +180,7 @@ Each module follows a strict dependency rule — dependencies point inward only:
 6. **Start the frontend**
    ```bash
    npm run dev
-   # Frontend: http://localhost:5173
+   # Frontend: http://localhost:3000
    # Proxies /api/* → http://localhost:5194
    ```
 
@@ -265,13 +265,13 @@ dotnet format backend/
 
 # Add a migration (once Finance module exists)
 dotnet ef migrations add <MigrationName> \
-  --context FinanceDbContext \
-  --project backend/src/Modules/Finance \
+  --context <DbContext> \
+  --project backend/src/Modules/<ProjectName> \
   --startup-project backend/src/Personal.FinanceTracker.Api
 
 # Apply migrations
 dotnet ef database update \
-  --context FinanceDbContext \
+  --context <DbContext> \
   --startup-project backend/src/Personal.FinanceTracker.Api
 ```
 
@@ -283,7 +283,7 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start dev server (http://localhost:5173)
+# Start dev server (http://localhost:3000)
 npm run dev
 
 # Type-check and build for production

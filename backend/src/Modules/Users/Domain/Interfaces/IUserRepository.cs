@@ -2,7 +2,7 @@ using Personal.FinanceTracker.Users.Domain.Entities;
 
 namespace Personal.FinanceTracker.Users.Domain.Interfaces;
 
-public interface IUserRepository: IRepository<User>
+public interface IUserRepository : IRepository<User>
 {
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
     Task<bool> EmailExistsAsync(string email, CancellationToken ct = default);

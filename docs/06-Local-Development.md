@@ -39,7 +39,7 @@ This starts both servers in a single terminal using [`concurrently`](https://git
 ```
 [api] info: Microsoft.Hosting.Lifetime — Now listening on: http://localhost:5194
 [web] VITE v7.x  ready in 300ms
-[web] ➜  Local:   http://localhost:5173/
+[web] ➜  Local:   http://localhost:3000/
 ```
 
 Stop both at once with `Ctrl+C`.
@@ -52,7 +52,7 @@ If you need to run only one side at a time:
 
 ```bash
 npm run dev:api   # ASP.NET backend only  → http://localhost:5194
-npm run dev:web   # Vite frontend only    → http://localhost:5173
+npm run dev:web   # Vite frontend only    → http://localhost:3000
 ```
 
 Or directly without the root scripts:
@@ -71,7 +71,7 @@ cd frontend && npm run dev
 
 | Service | URL |
 |---------|-----|
-| Frontend (Vite) | http://localhost:5173 |
+| Frontend (Vite) | http://localhost:3000 |
 | Backend (HTTP) | http://localhost:5194 |
 | Backend (HTTPS) | https://localhost:7199 |
 | Swagger UI | http://localhost:5194/swagger |

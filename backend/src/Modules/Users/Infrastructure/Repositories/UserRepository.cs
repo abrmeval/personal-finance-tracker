@@ -26,7 +26,7 @@ public sealed class UserRepository(UsersDbContext context) : IUserRepository
     public async Task<RefreshToken?> GetRefreshTokenAsync(string token, CancellationToken ct = default)
         => await context.RefreshTokens
             .FirstOrDefaultAsync(rt => rt.Token == token, ct);
-            
+
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);
 }

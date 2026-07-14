@@ -6,7 +6,7 @@ namespace Personal.FinanceTracker.Shared.Models;
 /// <typeparam name="T">The type of the data payload.</typeparam>
 public sealed class ApiResponse<T>
 {
-   public bool IsOk { get; init; }
+    public bool IsOk { get; init; }
     public T? Data { get; init; }
     public ApiError? Error { get; init; }
     public int StatusCode { get; init; }

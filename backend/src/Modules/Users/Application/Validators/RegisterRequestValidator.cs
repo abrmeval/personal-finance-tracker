@@ -19,7 +19,7 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .Matches("[a-z]").WithMessage("Password must contain at least one lowercase letter.")
             .Matches("[0-9]").WithMessage("Password must contain at least one digit.")
             .Matches("[.,&()-*]").WithMessage("Password must contain at least one special character (.,&()-*).");
-            
+
         RuleFor(x => x.FirstName)
             .NotEmpty().WithMessage("First name is required.")
             .MaximumLength(100).WithMessage("First name cannot exceed 100 characters.")

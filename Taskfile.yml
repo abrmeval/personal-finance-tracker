@@ -1,0 +1,34 @@
+version: "3"
+
+vars:
+  BACKEND_SNX: backend/Personal.FinanceTracker.slnx
+  BACKEND_PROJ: backend/src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj
+  FRONTEND_PATH: frontend
+
+tasks:
+  local:
+    desc: Runs local environment
+    cmds:
+      - task: frontend
+      - task: backend
+  local-debug:
+    desc: Runs local environment with debugging capabilities
+    cmds:
+      - task: frontend-debug
+      - task: backend
+  frontend:
+    desc: Locally preview the production build - Starts a server in the build directory (Frontend application)
+    cmds:
+      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run serve"
+  frontend-debug:
+    desc: Start Vite dev server - Frontend application 
+    cmds:
+      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run dev"
+  backend:
+    desc: Runs backend application
+    cmds:
+      - wt -w -1 new-tab -d "." --title "Backend API" cmd /k "dotnet build  {{.BACKEND_SNX}} && dotnet run --no-build --project {{.BACKEND_PROJ}}"
+  backend-format:
+    desc: Formats backend solution
+    cmds:
+      - dotnet format {{.BACKEND_SNX}}

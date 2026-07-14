@@ -37,7 +37,7 @@ public static class DependencyInjection
         //Configuration settings
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddSingleton<IJwtSettings>(sp => sp.GetRequiredService<IOptions<JwtSettings>>().Value);
-        
+
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
 

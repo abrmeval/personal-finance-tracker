@@ -27,5 +27,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Personal.FinanceTracker.Shared\Personal.FinanceTracker.Shared.csproj" />
     <ProjectReference Include="..\Modules\Users\Personal.FinanceTracker.Users.csproj" />
+    <ProjectReference Include="..\Modules\Finance\Personal.FinanceTracker.Finance.csproj" />
   </ItemGroup>
 </Project>

@@ -24,9 +24,11 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
             .IsRequired();
         builder.Property(rt => rt.ExpiresAt)
             .HasColumnName("expires_at")
+            .HasColumnType("timestamptz")
             .IsRequired();
         builder.Property(rt => rt.CreatedAt)
             .HasColumnName("created_at")
+            .HasColumnType("timestamptz")  // stores as UTC in PostgreSQL
             .HasDefaultValueSql("now()")
             .IsRequired();
         builder.Property(rt => rt.IsRevoked)
@@ -34,8 +36,9 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
             .HasDefaultValue(false)
             .IsRequired();
         builder.Property(rt => rt.RevokedAt)
-            .HasColumnName("revoked_at");
-            
+            .HasColumnName("revoked_at")
+            .HasColumnType("timestamptz");  // stores as UTC in PostgreSQL
+
         // Ignore computed properties that are not mapped to database columns    
         builder.Ignore(rt => rt.IsExpired);
         builder.Ignore(rt => rt.IsActive);

@@ -1,7 +1,7 @@
 ---
 description: A Full stack developer role for the Personal Finance Tracker project — React + TypeScript frontend, ASP.NET 10 modular monolith backend, Neon PostgreSQL database.
 agent: build
-model: github-copilot/claude-sonnet-4.6
+model: opencode-go/glm-5.2
 ---
 <role>
 <identity>

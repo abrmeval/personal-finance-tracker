@@ -53,13 +53,13 @@ public sealed class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenServ
         };
         var handler = new JwtSecurityTokenHandler();
         var principal = handler.ValidateToken(token, validationParameters, out var securityToken);
-        
+
         if (securityToken is not JwtSecurityToken jwt ||
             !jwt.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.OrdinalIgnoreCase))
         {
             throw new UnauthorizedAccessException("Invalid token.");
         }
-        
+
         return principal;
     }
 }

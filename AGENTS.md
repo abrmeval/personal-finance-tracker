@@ -168,6 +168,26 @@ Each backend module follows Clean Architecture layers:
 
 ---
 
+## Security Rules
+
+### Client-Side Storage
+
+- **Never store sensitive data in `localStorage`, `sessionStorage`, or JavaScript-accessible cookies.**
+- Sensitive data includes: passwords, JWT access tokens, full user PII beyond display name, payment details, or any value that grants access to resources.
+- `localStorage` and `sessionStorage` are accessible to any JavaScript running on the page — an XSS vulnerability exposes everything stored there.
+- **What is acceptable in `localStorage`:**
+  - Non-sensitive UI preferences (theme, sidebar collapsed state, locale)
+  - Non-sensitive display values (first name, display name — purely cosmetic, no access grants)
+- **What is never acceptable in `localStorage`:**
+  - JWT access tokens or refresh tokens
+  - Passwords or password hashes
+  - Full user objects containing email + id combinations used for authorization
+- **JWT tokens:** Access tokens should be held in memory (React state / context). Refresh tokens should be stored in `HttpOnly`, `Secure`, `SameSite=Strict` cookies — set by the server, inaccessible to JavaScript.
+- **Cookies:** May be used for session management only if set with `HttpOnly` and `Secure` flags. Never write sensitive values to cookies from JavaScript (`document.cookie`).
+- When in doubt, ask: "If an attacker injects a `<script>` tag, can they read this value?" If yes — do not store it client-side.
+
+---
+
 ## Testing Conventions
 
 ### Backend (xUnit + TestContainers)

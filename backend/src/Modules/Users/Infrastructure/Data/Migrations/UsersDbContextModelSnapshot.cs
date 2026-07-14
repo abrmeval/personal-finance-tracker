@@ -31,12 +31,12 @@ namespace Personal.FinanceTracker.Users.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamptz")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamptz")
                         .HasColumnName("expires_at");
 
                     b.Property<bool>("IsRevoked")
@@ -46,7 +46,7 @@ namespace Personal.FinanceTracker.Users.Infrastructure.Data.Migrations
                         .HasColumnName("is_revoked");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamptz")
                         .HasColumnName("revoked_at");
 
                     b.Property<string>("Token")
@@ -79,7 +79,7 @@ namespace Personal.FinanceTracker.Users.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamptz")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
@@ -108,7 +108,7 @@ namespace Personal.FinanceTracker.Users.Infrastructure.Data.Migrations
                         .HasColumnName("password_hash");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamptz")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");

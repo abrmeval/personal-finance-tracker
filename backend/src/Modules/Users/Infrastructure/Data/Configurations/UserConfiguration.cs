@@ -33,14 +33,16 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired();
         builder.Property(u => u.CreatedAt)
             .HasColumnName("created_at")
+            .HasColumnType("timestamptz")  // stores as UTC in PostgreSQL
             .HasDefaultValueSql("now()")
             .IsRequired();
         builder.Property(u => u.UpdatedAt)
-            .HasColumnName("updated_at");
+            .HasColumnName("updated_at")
+            .HasColumnType("timestamptz");  // stores as UTC in PostgreSQL
         builder.HasIndex(u => u.Email)
             .IsUnique()
             .HasDatabaseName("idx_users_email");
-            
+
         builder.HasMany<RefreshToken>()
             .WithOne()
             .HasForeignKey(rt => rt.UserId)
