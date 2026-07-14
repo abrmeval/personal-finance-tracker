@@ -180,7 +180,7 @@ Each module follows a strict dependency rule — dependencies point inward only:
 6. **Start the frontend**
    ```bash
    npm run dev
-   # Frontend: http://localhost:5173
+   # Frontend: http://localhost:3000
    # Proxies /api/* → http://localhost:5194
    ```
 
@@ -283,7 +283,7 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start dev server (http://localhost:5173)
+# Start dev server (http://localhost:3000)
 npm run dev
 
 # Type-check and build for production

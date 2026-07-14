@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
 using Personal.FinanceTracker.Shared.Middleware;
 using Personal.FinanceTracker.Users;
-using Personal.FinanceTracker.Users.Infrastructure.Data;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,8 +70,14 @@ if (app.Environment.IsDevelopment())
 {
     // app.UseSwagger();
     // app.UseSwaggerUI();
+    
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+{
+    options.Title = "Personal Finance Tracker API Reference";
+    options.Theme = ScalarTheme.BluePlanet;
+    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
 }
 
 app.UseHttpsRedirection();
@@ -85,12 +88,7 @@ app.UseAuthorization();
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready");
 
-app.MapScalarApiReference(options =>
-{
-    options.Title = "Personal Finance Tracker API Reference";
-    options.Theme = ScalarTheme.BluePlanet;
-    options.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
-});
+
 
 app.MapUsersEndpoints();
 // app.MapFinanceEndpoints();

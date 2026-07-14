@@ -61,6 +61,6 @@ export interface ApiResponse<T> {
   isOk: boolean;
   data?: T | null;
   error?: ApiError | null;
-  statusCode?: number;
+  statusCode: number;
   codeText?: string;
 }

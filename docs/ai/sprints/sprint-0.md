@@ -367,7 +367,7 @@ Replace the 7-line Hello World `Program.cs` with a production-ready pipeline tha
 
    builder.Services.AddCors(options =>
        options.AddDefaultPolicy(policy =>
-           policy.WithOrigins("http://localhost:5173")
+           policy.WithOrigins("http://localhost:3000")
                  .AllowAnyHeader()
                  .AllowAnyMethod()
                  .AllowCredentials()));
