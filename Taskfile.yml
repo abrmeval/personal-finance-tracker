@@ -1,0 +1,30 @@
+version: "3"
+
+vars:
+  BACKEND_SNX: backend/Personal.FinanceTracker.slnx
+  BACKEND_PROJ: backend/src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj
+  FRONTEND_PATH: frontend
+
+tasks:
+  local:
+    desc: Runs local environment
+    cmds:
+      - task: frontend
+      - task: backend
+  local-debug:
+    desc: Runs local environment with front-end debuggin capabilities
+    cmds:
+      - task: frontend-debug
+      - task: backend
+  frontend:
+    desc: Runs only frontend application
+    cmds:
+      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run dev"
+  frontend-debug:
+    desc: Runs only frontend application
+    cmds:
+      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run dev"
+  backend:
+    desc: Runs only backend application
+    cmds:
+      - wt -w -1 new-tab -d "." --title "Backend API" cmd /k "dotnet build  {{.BACKEND_SNX}} && dotnet run --project {{.BACKEND_PROJ}}"
