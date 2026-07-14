@@ -12,7 +12,7 @@ public sealed class RefreshToken
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsActive => !IsRevoked && !IsExpired;
     private RefreshToken() { }
-    
+
     public static RefreshToken Create(Guid userId, string token, DateTime expiresAt)
     {
         if (string.IsNullOrWhiteSpace(token))

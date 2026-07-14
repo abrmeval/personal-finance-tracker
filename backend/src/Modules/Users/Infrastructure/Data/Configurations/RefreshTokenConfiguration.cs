@@ -38,7 +38,7 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property(rt => rt.RevokedAt)
             .HasColumnName("revoked_at")
             .HasColumnType("timestamptz");  // stores as UTC in PostgreSQL
-            
+
         // Ignore computed properties that are not mapped to database columns    
         builder.Ignore(rt => rt.IsExpired);
         builder.Ignore(rt => rt.IsActive);

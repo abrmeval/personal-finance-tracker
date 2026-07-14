@@ -12,19 +12,23 @@ tasks:
       - task: frontend
       - task: backend
   local-debug:
-    desc: Runs local environment with front-end debuggin capabilities
+    desc: Runs local environment with debugging capabilities
     cmds:
       - task: frontend-debug
       - task: backend
   frontend:
-    desc: Runs only frontend application
+    desc: Locally preview the production build - Starts a server in the build directory (Frontend application)
     cmds:
-      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run dev"
+      - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run serve"
   frontend-debug:
-    desc: Runs only frontend application
+    desc: Start Vite dev server - Frontend application 
     cmds:
       - wt -w -0 new-tab -d "." --title "Frontend" cmd /k "cd {{.FRONTEND_PATH}} && npm run dev"
   backend:
-    desc: Runs only backend application
+    desc: Runs backend application
     cmds:
       - wt -w -1 new-tab -d "." --title "Backend API" cmd /k "dotnet build  {{.BACKEND_SNX}} && dotnet run --no-build --project {{.BACKEND_PROJ}}"
+  backend-format:
+    desc: Formats backend solution
+    cmds:
+      - dotnet format {{.BACKEND_SNX}}

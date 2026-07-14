@@ -123,7 +123,7 @@ public static class AuthEndpoints
                     Title = "Refresh Token Failed",
                     Status = StatusCodes.Status401Unauthorized,
                     Detail = result.Error?.Description,
-                    Instance = httpContext.Request.Path,                   
+                    Instance = httpContext.Request.Path,
                 },
                 StatusCode = StatusCodes.Status401Unauthorized,
                 CodeText = "UNAUTHORIZED"

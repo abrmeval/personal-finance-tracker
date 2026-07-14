@@ -1,5 +1,6 @@
 using System.Security.Claims;
 namespace Personal.FinanceTracker.Shared.Extensions;
+
 public static class ClaimsPrincipalExtensions
 {
     public static Guid GetUserId(this ClaimsPrincipal user)
