@@ -27,4 +27,4 @@ tasks:
   backend:
     desc: Runs only backend application
     cmds:
-      - wt -w -1 new-tab -d "." --title "Backend API" cmd /k "dotnet build  {{.BACKEND_SNX}} && dotnet run --project {{.BACKEND_PROJ}}"
+      - wt -w -1 new-tab -d "." --title "Backend API" cmd /k "dotnet build  {{.BACKEND_SNX}} && dotnet run --no-build --project {{.BACKEND_PROJ}}"
