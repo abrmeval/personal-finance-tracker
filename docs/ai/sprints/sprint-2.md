@@ -1,7 +1,7 @@
 # Sprint 2 — Finance Module: Transactions & Categories
 
 **Duration:** 2 weeks (02/06/2026 — 16/06/2026)
-**Status:** In Progress
+**Status:** In Progress (Tasks 1–28 complete — pending commit, end-to-end runtime verification, and designer-enforcer review)
 **Overview:** [SPRINTS-OVERVIEW.md](./SPRINTS-OVERVIEW.md)
 
 ---
@@ -69,16 +69,20 @@ The following items are tracked here for visibility and **should be planned into
 
 ### Implementation Notes — Deviations from the Original Plan
 
-The backend for this sprint (Tasks 1–22) was completed on 31/08/2026. The shipped code is the source of truth and deviates from the task code samples below in these ways:
+The backend for this sprint (Tasks 1–22) was completed on 31/08/2026; the frontend (Tasks 23–28) was completed on 01/09/2026. The shipped code is the source of truth and deviates from the task code samples below in these ways:
 
 - **Service contracts live in `Application/Interfaces/`** (not `Application/Services/`) — matching the Users module and `docs/01-Project-Structure.md`. Implementations remain in `Infrastructure/Services/`.
-- **DTO folders are `Application/DTOs.Requests/` and `Application/DTOs.Responses/`** (dot-style, not nested `DTOs/Requests/`) — matching the Users module.
+- **DTO folders are nested `Application/DTOs/Requests/` and `Application/DTOs/Responses/`, with dot-style namespaces** (`...Application.DTOs.Requests`, `...Application.DTOs.Responses`) — matching the Users module on disk. (The task samples below show `DTOs.Requests/` paths; the actual folders are nested.)
 - **Soft delete instead of hard delete.** `Category` and `Transaction` expose an `IsActive` flag and a `Deactivate()` method; repository `DeleteAsync` methods call `Deactivate()` rather than `context.Remove(...)`.
   - Both EF configurations map `is_active` as `boolean NOT NULL DEFAULT TRUE`.
   - All user-facing repository queries filter `IsActive` (lists, paged queries, counts, existence checks, expense totals). `CategoryRepository.GetByIdAsync` intentionally returns deactivated categories so historical transactions still resolve their category name.
   - The category unique-name index is partial — `UNIQUE (user_id, name) WHERE is_active` — so a deactivated category's name can be reused.
   - `DELETE /api/categories/{id}` soft-deletes; transactions keep their category reference.
 - **EF configuration files are named `CategoryConfiguration.cs` and `TransactionConfiguration.cs`** (singular, matching the Users module pattern).
+- **Frontend — `TransactionForm` uses the three-generic `useForm` signature:** `useForm<TransactionFormInput, unknown, TransactionFormData>` where `TransactionFormInput = z.input<typeof transactionSchema>` (exported from `features/transactions/schemas.ts`). This is required because `z.coerce.number()` makes the schema's input type (`unknown`) differ from its output type (`number`); the single-generic form shown in the Task 27 sample does not compile.
+- **Frontend — `TransactionList` formats currency and dates as `es-MX` / `MXN`** (not `en-US` / `USD` as in the Task 27 sample) — intentional localization.
+- **Frontend — page files are `CategoriesPage.tsx` and `TransactionsPage.tsx`** (plural, matching the exported component names).
+- **Frontend — a `build-lint` npm script was added** (`eslint . && tsc -b && vite build`) alongside the existing scripts.
 
 ---
 
@@ -2228,9 +2232,9 @@ Create the `DependencyInjection` static class for the Finance module (matching t
 
 ---
 
-### Task 23 — Frontend: Type Definitions - *CONTINUE HERE 2026-08-31*
+### Task 23 — Frontend: Type Definitions
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add finance type definitions to `src/types/`. Mirror the backend DTOs exactly. Use `TransactionType` as a string literal union type (consistent with `verbatimModuleSyntax` — no `enum` keyword). Create `PagedResult<T>` in `src/types/http.ts` since it mirrors the shared backend type.
@@ -2329,7 +2333,7 @@ Add finance type definitions to `src/types/`. Mirror the backend DTOs exactly. U
 
 ### Task 24 — Frontend: API Service Modules
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `categoriesApi` and `transactionsApi` objects following the `authApi` pattern. All functions return `Promise<ApiResponse<T>>`. The `apiClient` from `src/api/client.ts` handles auth tokens automatically.
@@ -2409,7 +2413,7 @@ Create `categoriesApi` and `transactionsApi` objects following the `authApi` pat
 
 ### Task 25 — Frontend: Custom Hooks
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create TanStack Query hooks for categories and transactions. All hooks follow the query key factory pattern. Mutations invalidate the appropriate list keys on success. Co-locate hooks in feature folders.
@@ -2536,7 +2540,7 @@ Create TanStack Query hooks for categories and transactions. All hooks follow th
 
 ### Task 26 — Frontend: Category Components and Page
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `CategoryForm`, `CategoryList`, and `CategoriesPage`. The form uses Zod + React Hook Form. The page owns the data fetching (via `useCategories`), the create/edit modal state, and the delete confirmation flow. Follow the Tailwind styling patterns established in `LoginPage`.
@@ -2915,7 +2919,7 @@ Create `CategoryForm`, `CategoryList`, and `CategoriesPage`. The form uses Zod +
 
 ### Task 27 — Frontend: Transaction Components and Page
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `TransactionForm`, `TransactionList`, and `TransactionsPage`. The form includes a category selector populated from `useCategories`. The page owns pagination state, filter state, data fetching, and CRUD modal flows.
@@ -3423,7 +3427,7 @@ Create `TransactionForm`, `TransactionList`, and `TransactionsPage`. The form in
 
 ### Task 28 — Frontend: Router Wire-up
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Replace the placeholder `<div>` elements for `/transactions` and `/categories` routes in `src/routes/index.tsx` with the real page components.
@@ -3505,8 +3509,8 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
 
 ## Success Criteria — Sprint Complete
 
-- [ ] `dotnet build` passes with 0 errors and 0 warnings
-- [ ] `npm run build` passes with 0 TypeScript errors
+- [x] `dotnet build` passes with 0 errors and 0 warnings
+- [x] `npm run build` passes with 0 TypeScript errors
 - [ ] `finances.categories` and `finances.transactions` tables exist in the database
 - [ ] `GET /api/categories` returns all categories for the authenticated user
 - [ ] `POST /api/categories` creates a category; returns 409 if the name already exists
@@ -3517,14 +3521,16 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
 - [ ] `POST /api/transactions` creates a transaction; returns 400 if the category does not belong to the user
 - [ ] `PUT /api/transactions/{id}` updates a transaction; returns 404 if not owned by the user
 - [ ] `DELETE /api/transactions/{id}` deletes a transaction; returns 404 if not owned by the user
-- [ ] `ITransactionRepository.GetTotalExpensesByCategoryAsync` is implemented for Sprint 3 forward compatibility
+- [x] `ITransactionRepository.GetTotalExpensesByCategoryAsync` is implemented for Sprint 3 forward compatibility
 - [ ] Frontend `/categories` page is functional end-to-end (create, view, update, delete)
 - [ ] Frontend `/transactions` page is functional end-to-end (create, view, update, delete, pagination)
-- [ ] All endpoints return `ApiResponse<T>` envelope with `IsOk`, `Data`, `StatusCode`, `CodeText`
-- [ ] All services return `Result<T>` — no raw exceptions for expected business failures
-- [ ] No stale `// TODO Sprint 2:` comments in `Program.cs`
-- [ ] `AuthEnpoints.cs` filename typo corrected to `AuthEndpoints.cs`
+- [x] All endpoints return `ApiResponse<T>` envelope with `IsOk`, `Data`, `StatusCode`, `CodeText`
+- [x] All services return `Result<T>` — no raw exceptions for expected business failures
+- [x] No stale `// TODO Sprint 2:` comments in `Program.cs`
+- [x] `AuthEnpoints.cs` filename typo corrected to `AuthEndpoints.cs`
+
+> **Verification status (01/09/2026):** Checked items are verified via build and source inspection. Unchecked items require a running API + database and remain pending end-to-end runtime verification. Per the sprint rules, the `designer-enforcer` agent must also review this sprint before it is marked Done.
 
 ---
 
-*Last updated: 31/08/2026*
+*Last updated: 01/09/2026*

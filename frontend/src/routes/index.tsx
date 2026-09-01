@@ -4,6 +4,8 @@ import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
+import { TransactionsPage } from "@/features/transactions/pages/TransactionsPage";
+import { CategoriesPage } from "@/features/categories/pages/CategoriesPage";
 
 const router = createBrowserRouter([
   {
@@ -30,19 +32,11 @@ const router = createBrowserRouter([
           },
           {
             path: "transactions",
-            element: (
-              <div className="text-gray-500">
-                Transactions — coming in Sprint 2
-              </div>
-            ),
+            element: <TransactionsPage />,
           },
           {
             path: "categories",
-            element: (
-              <div className="text-gray-500">
-                Categories — coming in Sprint 2
-              </div>
-            ),
+            element: <CategoriesPage />,
           },
           {
             path: "budgets",

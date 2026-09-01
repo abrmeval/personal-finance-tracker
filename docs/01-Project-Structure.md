@@ -147,13 +147,14 @@ backend/src/Modules/Users/          ← Implemented (Sprint 1)
 │       └── 📄 IUserRepository.cs
 │
 ├── 📁 Application/
-│   ├── 📁 DTOs.Requests/          ← Request records (dot-style folder naming)
-│   │   ├── 📄 LoginRequest.cs
-│   │   ├── 📄 RegisterRequest.cs
-│   │   └── 📄 RefreshTokenRequest.cs
-│   ├── 📁 DTOs.Responses/
-│   │   ├── 📄 AuthResponse.cs
-│   │   └── 📄 UserResponse.cs
+│   ├── 📁 DTOs/
+│   │   ├── 📁 Requests/            ← Request records (namespace: ...Application.DTOs.Requests)
+│   │   │   ├── 📄 LoginRequest.cs
+│   │   │   ├── 📄 RegisterRequest.cs
+│   │   │   └── 📄 RefreshTokenRequest.cs
+│   │   └── 📁 Responses/
+│   │       ├── 📄 AuthResponse.cs
+│   │       └── 📄 UserResponse.cs
 │   ├── 📁 Interfaces/             ← Service + settings contracts
 │   │   ├── 📄 IJwtSettings.cs
 │   │   ├── 📄 ITokenService.cs
@@ -206,15 +207,16 @@ backend/src/Modules/Finance/
 │       └── 📄 ICategoryRepository.cs
 │
 ├── 📁 Application/                      # Use cases and business rules
-│   ├── 📁 DTOs.Requests/                # Request records (dot-style, matching Users module)
-│   │   ├── 📄 CreateCategoryRequest.cs
-│   │   ├── 📄 UpdateCategoryRequest.cs
-│   │   ├── 📄 CreateTransactionRequest.cs
-│   │   ├── 📄 UpdateTransactionRequest.cs
-│   │   └── 📄 TransactionQueryParams.cs
-│   ├── 📁 DTOs.Responses/
-│   │   ├── 📄 CategoryResponse.cs
-│   │   └── 📄 TransactionResponse.cs
+│   ├── 📁 DTOs/
+│   │   ├── 📁 Requests/                # Request records (namespace: ...Application.DTOs.Requests)
+│   │   │   ├── 📄 CreateCategoryRequest.cs
+│   │   │   ├── 📄 UpdateCategoryRequest.cs
+│   │   │   ├── 📄 CreateTransactionRequest.cs
+│   │   │   ├── 📄 UpdateTransactionRequest.cs
+│   │   │   └── 📄 TransactionQueryParams.cs
+│   │   └── 📁 Responses/
+│   │       ├── 📄 CategoryResponse.cs
+│   │       └── 📄 TransactionResponse.cs
 │   ├── 📁 Interfaces/                   # Service contracts
 │   │   ├── 📄 ICategoryService.cs
 │   │   └── 📄 ITransactionService.cs
@@ -442,4 +444,4 @@ csharp_style_var_when_type_is_apparent = true
 
 *Next: [02-Backend-Documentation.md](./02-Backend-Documentation.md)*
 
-*Last Updated: 31 Aug 2026*
+*Last Updated: 01 Sep 2026*
