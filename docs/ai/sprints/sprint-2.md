@@ -2236,7 +2236,7 @@ Create the `DependencyInjection` static class for the Finance module (matching t
 
 ---
 
-### Task 23 — Frontend: Type Definitions
+### Task 23 — Frontend: Type Definitions - *CONTINUE HERE 2026-08-31*
 
 **Status:** New
 
