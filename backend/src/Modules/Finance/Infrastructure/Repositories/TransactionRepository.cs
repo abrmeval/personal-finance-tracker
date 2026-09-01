@@ -54,6 +54,11 @@ public sealed class TransactionRepository(FinanceDbContext context) : ITransacti
     public async Task AddAsync(Transaction transaction, CancellationToken ct = default)
         => await context.Transactions.AddAsync(transaction, ct);
 
+    public Task DeleteAsync(Transaction transaction, CancellationToken ct = default)
+    {
+        transaction.Deactivate();
+        return Task.CompletedTask;
+    }
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);
 

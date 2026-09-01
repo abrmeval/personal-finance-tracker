@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Personal.FinanceTracker.Finance;
 using Personal.FinanceTracker.Shared.Middleware;
 using Personal.FinanceTracker.Users;
 using Scalar.AspNetCore;
@@ -91,7 +92,7 @@ app.MapHealthChecks("/health/ready");
 
 
 app.MapUsersEndpoints();
-// app.MapFinanceEndpoints();
+app.MapFinanceEndpoints();
 
 // TODO Sprint 4: app.MapReportingEndpoints();
 

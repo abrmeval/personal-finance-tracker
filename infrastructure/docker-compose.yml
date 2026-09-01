@@ -1,3 +1,4 @@
+name: personal-finance-tracker
 services:
   db:
     image: postgres:18.4
