@@ -67,6 +67,19 @@ The following items are tracked here for visibility and **should be planned into
 
 - **Update localStorage user data on profile update:** When a user updates their profile (name, email), the `AuthContext` user object and any value persisted in `localStorage` must be refreshed to reflect the change. Without this, the `Header` will continue showing the stale name after an update.
 
+### Implementation Notes — Deviations from the Original Plan
+
+The backend for this sprint (Tasks 1–22) was completed on 31/08/2026. The shipped code is the source of truth and deviates from the task code samples below in these ways:
+
+- **Service contracts live in `Application/Interfaces/`** (not `Application/Services/`) — matching the Users module and `docs/01-Project-Structure.md`. Implementations remain in `Infrastructure/Services/`.
+- **DTO folders are `Application/DTOs.Requests/` and `Application/DTOs.Responses/`** (dot-style, not nested `DTOs/Requests/`) — matching the Users module.
+- **Soft delete instead of hard delete.** `Category` and `Transaction` expose an `IsActive` flag and a `Deactivate()` method; repository `DeleteAsync` methods call `Deactivate()` rather than `context.Remove(...)`.
+  - Both EF configurations map `is_active` as `boolean NOT NULL DEFAULT TRUE`.
+  - All user-facing repository queries filter `IsActive` (lists, paged queries, counts, existence checks, expense totals). `CategoryRepository.GetByIdAsync` intentionally returns deactivated categories so historical transactions still resolve their category name.
+  - The category unique-name index is partial — `UNIQUE (user_id, name) WHERE is_active` — so a deactivated category's name can be reused.
+  - `DELETE /api/categories/{id}` soft-deletes; transactions keep their category reference.
+- **EF configuration files are named `CategoryConfiguration.cs` and `TransactionConfiguration.cs`** (singular, matching the Users module pattern).
+
 ---
 
 ## Tasks
@@ -75,7 +88,7 @@ The following items are tracked here for visibility and **should be planned into
 
 ### Task 1 — Pre-Sprint Cleanup: Fix Program.cs and AuthEnpoints Filename
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Replace the stale `// TODO Sprint 2:` comments in `Program.cs` with actual Finance module registration calls, and fix the `AuthEnpoints.cs` filename typo to `AuthEndpoints.cs`. A clean `Program.cs` is required before adding the Finance module.
@@ -117,7 +130,7 @@ Replace the stale `// TODO Sprint 2:` comments in `Program.cs` with actual Finan
 
 ### Task 2 — Create Finance Module Project
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `Personal.FinanceTracker.Finance` class library project with the same Clean Architecture layer structure as the Users module. Register it in the `.slnx` solution file and add a project reference from the API host.
@@ -132,11 +145,9 @@ Create the `Personal.FinanceTracker.Finance` class library project with the same
    │   ├── Enums/
    │   └── Interfaces/
    ├── Application/
-   │   ├── DTOs/
-   │   │   ├── Requests/
-   │   │   └── Responses/
+   │   ├── DTOs.Requests/
+   │   ├── DTOs.Responses/
    │   ├── Interfaces/
-   │   ├── Services/
    │   └── Validators/
    ├── Infrastructure/
    │   ├── Data/
@@ -224,7 +235,7 @@ Create the `Personal.FinanceTracker.Finance` class library project with the same
 
 ### Task 3 — TransactionType Enum
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add the `TransactionType` enum to the Finance module's Domain layer. This enum distinguishes income from expense transactions. It is stored as a string in the database via EF Core's `HasConversion<string>()`.
@@ -252,7 +263,7 @@ Add the `TransactionType` enum to the Finance module's Domain layer. This enum d
 
 ### Task 4 — Category Domain Entity
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `Category` entity in the Finance module's Domain layer. It extends `Entity` from `Personal.FinanceTracker.Shared.Abstractions`. All properties have `private set`. The static `Create(...)` factory validates inputs and throws `ArgumentException` for invalid domain state. An `Update(...)` method allows modifying the name, icon, and color without replacing the entity.
@@ -329,7 +340,7 @@ Create the `Category` entity in the Finance module's Domain layer. It extends `E
 
 ### Task 5 — Transaction Domain Entity
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `Transaction` entity in the Finance module's Domain layer. It extends `Entity`, has a `TransactionType` enum property, and an optional `CategoryId` (transactions can be uncategorized). The `Amount` is stored as `decimal` with `HasPrecision(18, 2)` in EF Core. The `Update(...)` method allows modifying description, amount, type, date, category, and notes.
@@ -442,7 +453,7 @@ Create the `Transaction` entity in the Finance module's Domain layer. It extends
 
 ### Task 6 — ICategoryRepository Interface
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Define the `ICategoryRepository` interface in the Finance module's Domain layer. The interface is pure — no EF Core or infrastructure references. All methods accept a `CancellationToken`. Single-entity lookups return `Category?` (nullable) — never throw for not-found.
@@ -479,7 +490,7 @@ Define the `ICategoryRepository` interface in the Finance module's Domain layer.
 
 ### Task 7 — ITransactionRepository Interface
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Define the `ITransactionRepository` interface in the Finance module's Domain layer. This interface includes paged query support, filtering by date range / category / type, and a `GetTotalExpensesByCategoryAsync` method required by Sprint 3's `BudgetService`.
@@ -545,7 +556,7 @@ Define the `ITransactionRepository` interface in the Finance module's Domain lay
 
 ### Task 8 — FinanceDbContext
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `FinanceDbContext` with `HasDefaultSchema("finances")`. It follows the same pattern as `UsersDbContext` — sealed class with primary constructor, `DbSet` properties, and `ApplyConfigurationsFromAssembly` in `OnModelCreating`.
@@ -583,7 +594,7 @@ Create the `FinanceDbContext` with `HasDefaultSchema("finances")`. It follows th
 
 ### Task 9 — Category EF Core Configuration
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add an `IEntityTypeConfiguration<Category>` Fluent API configuration. Use snake_case column names, `timestamptz` for date columns, and `idx_` prefix for index names — matching the pattern established in `UserConfiguration.cs`.
@@ -656,12 +667,14 @@ Add an `IEntityTypeConfiguration<Category>` Fluent API configuration. Use snake_
 - `created_at` has `HasDefaultValueSql("now()")`
 - Unique index on `(user_id, name)` prevents duplicate category names per user
 - Index names use `idx_` prefix
+- `is_active` is mapped as `boolean NOT NULL DEFAULT TRUE` (soft delete)
+- The unique name index is partial (`WHERE is_active`) — deactivated category names can be reused
 
 ---
 
 ### Task 10 — Transaction EF Core Configuration
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add an `IEntityTypeConfiguration<Transaction>` Fluent API configuration. The `Amount` column uses `HasPrecision(18, 2)`. The `TransactionType` enum is stored as a string via `HasConversion<string>()`. The `CategoryId` is nullable with a foreign key to `categories`.
@@ -757,12 +770,13 @@ Add an `IEntityTypeConfiguration<Transaction>` Fluent API configuration. The `Am
 - `CategoryId` is nullable with `SetNull` delete behavior
 - `Date`, `created_at`, and `updated_at` are `timestamptz`
 - Indexes on `user_id`, `date`, and `(user_id, category_id)` for query performance
+- `is_active` is mapped as `boolean NOT NULL DEFAULT TRUE` (soft delete)
 
 ---
 
 ### Task 11 — EF Core Migration
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Generate and apply the initial Finance module migration. This creates the `finances.categories` and `finances.transactions` tables in the PostgreSQL database.
@@ -806,7 +820,7 @@ Generate and apply the initial Finance module migration. This creates the `finan
 
 ### Task 12 — CategoryRepository Implementation
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Implement `ICategoryRepository` in the Infrastructure layer using `FinanceDbContext`. Pass `CancellationToken` through to all EF Core async calls. Follow the same pattern as `UserRepository`.
@@ -865,7 +879,7 @@ Implement `ICategoryRepository` in the Infrastructure layer using `FinanceDbCont
 
 ### Task 13 — TransactionRepository Implementation
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Implement `ITransactionRepository` in the Infrastructure layer. The paged query method builds a filtered `IQueryable` progressively, then applies pagination. The `GetTotalExpensesByCategoryAsync` method sums `Amount` for expense transactions within a date range — this is the forward-looking method needed by Sprint 3.
@@ -988,7 +1002,7 @@ Implement `ITransactionRepository` in the Infrastructure layer. The paged query 
 
 ### Task 14 — PagedResult<T> and TransactionQueryParams
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `PagedResult<T>` generic type in the Shared project (it will be reused by Reporting in Sprint 4) and the `TransactionQueryParams` record in the Finance Application layer. The query params record uses `[AsParameters]` for Minimal API binding.
@@ -1011,7 +1025,7 @@ Create the `PagedResult<T>` generic type in the Shared project (it will be reuse
    }
    ```
 
-2. Create `backend/src/Modules/Finance/Application/DTOs/Requests/TransactionQueryParams.cs`:
+2. Create `backend/src/Modules/Finance/Application/DTOs.Requests/TransactionQueryParams.cs`:
    ```csharp
    using Personal.FinanceTracker.Finance.Domain.Enums;
 
@@ -1042,14 +1056,14 @@ Create the `PagedResult<T>` generic type in the Shared project (it will be reuse
 
 ### Task 15 — Category DTOs
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create request and response DTOs for categories as sealed `record` types in the Application layer. Mirror the pattern established by `RegisterRequest` and `AuthResponse` in the Users module.
 
 **Steps:**
 
-1. Create `backend/src/Modules/Finance/Application/DTOs/Requests/CreateCategoryRequest.cs`:
+1. Create `backend/src/Modules/Finance/Application/DTOs.Requests/CreateCategoryRequest.cs`:
    ```csharp
    namespace Personal.FinanceTracker.Finance.Application.DTOs.Requests;
 
@@ -1059,7 +1073,7 @@ Create request and response DTOs for categories as sealed `record` types in the 
        string? Color);
    ```
 
-2. Create `backend/src/Modules/Finance/Application/DTOs/Requests/UpdateCategoryRequest.cs`:
+2. Create `backend/src/Modules/Finance/Application/DTOs.Requests/UpdateCategoryRequest.cs`:
    ```csharp
    namespace Personal.FinanceTracker.Finance.Application.DTOs.Requests;
 
@@ -1069,7 +1083,7 @@ Create request and response DTOs for categories as sealed `record` types in the 
        string? Color);
    ```
 
-3. Create `backend/src/Modules/Finance/Application/DTOs/Responses/CategoryResponse.cs`:
+3. Create `backend/src/Modules/Finance/Application/DTOs.Responses/CategoryResponse.cs`:
    ```csharp
    namespace Personal.FinanceTracker.Finance.Application.DTOs.Responses;
 
@@ -1093,14 +1107,14 @@ Create request and response DTOs for categories as sealed `record` types in the 
 
 ### Task 16 — Transaction DTOs
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create request and response DTOs for transactions. The `TransactionResponse` includes the `CategoryName` for display convenience — the service joins the category name when mapping.
 
 **Steps:**
 
-1. Create `backend/src/Modules/Finance/Application/DTOs/Requests/CreateTransactionRequest.cs`:
+1. Create `backend/src/Modules/Finance/Application/DTOs.Requests/CreateTransactionRequest.cs`:
    ```csharp
    using Personal.FinanceTracker.Finance.Domain.Enums;
 
@@ -1115,7 +1129,7 @@ Create request and response DTOs for transactions. The `TransactionResponse` inc
        string? Notes);
    ```
 
-2. Create `backend/src/Modules/Finance/Application/DTOs/Requests/UpdateTransactionRequest.cs`:
+2. Create `backend/src/Modules/Finance/Application/DTOs.Requests/UpdateTransactionRequest.cs`:
    ```csharp
    using Personal.FinanceTracker.Finance.Domain.Enums;
 
@@ -1130,7 +1144,7 @@ Create request and response DTOs for transactions. The `TransactionResponse` inc
        string? Notes);
    ```
 
-3. Create `backend/src/Modules/Finance/Application/DTOs/Responses/TransactionResponse.cs`:
+3. Create `backend/src/Modules/Finance/Application/DTOs.Responses/TransactionResponse.cs`:
    ```csharp
    using Personal.FinanceTracker.Finance.Domain.Enums;
 
@@ -1160,7 +1174,7 @@ Create request and response DTOs for transactions. The `TransactionResponse` inc
 
 ### Task 17 — FluentValidation Validators
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create one `AbstractValidator<T>` per mutating request type. All live in `Application/Validators/`. Validators enforce structural rules only — no database calls. Business rules (duplicate category name, ownership) are enforced in the service layer. Follow the pattern established by `RegisterRequestValidator`.
@@ -1290,7 +1304,7 @@ Create one `AbstractValidator<T>` per mutating request type. All live in `Applic
 
 ### Task 18 — ICategoryService and CategoryService
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the category service interface in the Application layer and its implementation in the Infrastructure layer. `CategoryService` handles all business logic: ownership validation, duplicate name checking, and mapping to DTOs. Services return `Result<T>` — following the established pattern from `UserService`.
@@ -1303,7 +1317,7 @@ Create the category service interface in the Application layer and its implement
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
    using Personal.FinanceTracker.Shared.Models;
 
-   namespace Personal.FinanceTracker.Finance.Application.Services;
+   namespace Personal.FinanceTracker.Finance.Application.Interfaces;
 
    public interface ICategoryService
    {
@@ -1336,7 +1350,7 @@ Create the category service interface in the Application layer and its implement
    using Microsoft.Extensions.Logging;
    using Personal.FinanceTracker.Finance.Application.DTOs.Requests;
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
-   using Personal.FinanceTracker.Finance.Application.Services;
+   using Personal.FinanceTracker.Finance.Application.Interfaces;
    using Personal.FinanceTracker.Finance.Domain.Entities;
    using Personal.FinanceTracker.Finance.Domain.Interfaces;
    using Personal.FinanceTracker.Shared.Constants;
@@ -1414,12 +1428,8 @@ Create the category service interface in the Application layer and its implement
                return Result<bool>.Failure(new(ApiErrorCode.CategoryNotFound, "Category not found."));
            }
 
-           // Note: EF Core will SET NULL on transactions due to OnDelete(DeleteBehavior.SetNull)
-           // We need to remove the entity and save changes
-           // The repository doesn't have a DeleteAsync — we need to use the context directly
-           // OR add a DeleteAsync method to the interface. Let's add it.
-           // For now, we'll handle this in the repository update.
-           await repository.SaveChangesAsync(ct);
+            await repository.DeleteAsync(category, ct);
+            await repository.SaveChangesAsync(ct);
 
            logger.LogInformation("Category {CategoryId} deleted by user {UserId}", category.Id, userId);
            return Result<bool>.Success(true);
@@ -1437,35 +1447,18 @@ Create the category service interface in the Application layer and its implement
    > Task DeleteAsync(Category category, CancellationToken ct = default);
    > ```
    >
-   > In `CategoryRepository.cs`, add:
-   > ```csharp
-   > public Task DeleteAsync(Category category, CancellationToken ct = default)
-   > {
-   >     context.Categories.Remove(category);
-   >     return Task.CompletedTask;
-   > }
-   > ```
+    > In `CategoryRepository.cs`, add (soft delete — see Implementation Notes):
+    > ```csharp
+    > public Task DeleteAsync(Category category, CancellationToken ct = default)
+    > {
+    >     category.Deactivate();
+    >     return Task.CompletedTask;
+    > }
+    > ```
    >
    > Then update `CategoryService.DeleteAsync` to call `repository.DeleteAsync(category, ct)` before `SaveChangesAsync`.
 
-4. Update `CategoryService.DeleteAsync` after adding `DeleteAsync` to the repository:
-   ```csharp
-   public async Task<Result<bool>> DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
-   {
-       var category = await repository.GetByUserAndIdAsync(userId, id, ct);
-       if (category is null)
-       {
-           logger.LogWarning("Category delete failed: {CategoryId} not found for user {UserId}", id, userId);
-           return Result<bool>.Failure(new(ApiErrorCode.CategoryNotFound, "Category not found."));
-       }
-
-       await repository.DeleteAsync(category, ct);
-       await repository.SaveChangesAsync(ct);
-
-       logger.LogInformation("Category {CategoryId} deleted by user {UserId}", category.Id, userId);
-       return Result<bool>.Success(true);
-   }
-   ```
+4. `CategoryService.DeleteAsync` calls `repository.DeleteAsync(category, ct)` — which soft-deactivates the category — before `SaveChangesAsync`. The final version is shown in step 3 above.
 
 5. Run `dotnet build` — confirm 0 errors.
 
@@ -1477,10 +1470,9 @@ Create the category service interface in the Application layer and its implement
 - `DeleteAsync` is added to both `ICategoryRepository` and `CategoryRepository`
 
 ---
-### CONTINUE HERE : 29/06/2026
 ### Task 19 — ITransactionService and TransactionService
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the transaction service interface and implementation. `TransactionService` handles ownership validation, category ownership validation (if a category is specified), paged queries, and mapping to `TransactionResponse` with the category name included.
@@ -1493,7 +1485,7 @@ Create the transaction service interface and implementation. `TransactionService
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
    using Personal.FinanceTracker.Shared.Models;
 
-   namespace Personal.FinanceTracker.Finance.Application.Services;
+   namespace Personal.FinanceTracker.Finance.Application.Interfaces;
 
    public interface ITransactionService
    {
@@ -1512,11 +1504,11 @@ Create the transaction service interface and implementation. `TransactionService
    Task DeleteAsync(Transaction transaction, CancellationToken ct = default);
    ```
 
-3. Add `DeleteAsync` to `TransactionRepository`:
+3. Add `DeleteAsync` to `TransactionRepository` (soft delete — see Implementation Notes):
    ```csharp
    public Task DeleteAsync(Transaction transaction, CancellationToken ct = default)
    {
-       context.Transactions.Remove(transaction);
+       transaction.Deactivate();
        return Task.CompletedTask;
    }
    ```
@@ -1526,7 +1518,7 @@ Create the transaction service interface and implementation. `TransactionService
    using Microsoft.Extensions.Logging;
    using Personal.FinanceTracker.Finance.Application.DTOs.Requests;
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
-   using Personal.FinanceTracker.Finance.Application.Services;
+   using Personal.FinanceTracker.Finance.Application.Interfaces;
    using Personal.FinanceTracker.Finance.Domain.Entities;
    using Personal.FinanceTracker.Finance.Domain.Interfaces;
    using Personal.FinanceTracker.Shared.Constants;
@@ -1717,10 +1709,10 @@ Create the transaction service interface and implementation. `TransactionService
 
 ### Task 20 — CategoryEndpoints Minimal API
 
-**Status:** New
+**Status:** Done
 
 **Description:**
-Create the `CategoryEndpoints` static class in the Api layer. All endpoints are scoped to the authenticated user via `ClaimsPrincipalExtensions.GetUserId()`. The group requires authorization. Apply `ValidationFilter<T>` to create and update endpoints. All responses are wrapped in `ApiResponse<T>` — following the pattern established in `AuthEnpoints.cs`.
+Create the `CategoryEndpoints` static class in the Api layer. All endpoints are scoped to the authenticated user via `ClaimsPrincipalExtensions.GetUserId()`. The group requires authorization. Apply `ValidationFilter<T>` to create and update endpoints. All responses are wrapped in `ApiResponse<T>` — following the pattern established in `AuthEndpoints.cs`.
 
 **Steps:**
 
@@ -1733,7 +1725,7 @@ Create the `CategoryEndpoints` static class in the Api layer. All endpoints are 
    using Microsoft.AspNetCore.Routing;
    using Personal.FinanceTracker.Finance.Application.DTOs.Requests;
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
-   using Personal.FinanceTracker.Finance.Application.Services;
+   using Personal.FinanceTracker.Finance.Application.Interfaces;
    using Personal.FinanceTracker.Shared.Extensions;
    using Personal.FinanceTracker.Shared.Filters;
    using Personal.FinanceTracker.Shared.Models;
@@ -1929,7 +1921,7 @@ Create the `CategoryEndpoints` static class in the Api layer. All endpoints are 
 
 ### Task 21 — TransactionEndpoints Minimal API
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `TransactionEndpoints` static class. The list endpoint uses `[AsParameters] TransactionQueryParams` for filter + pagination binding. All endpoints are authorized and wrapped in `ApiResponse<T>`.
@@ -1945,7 +1937,7 @@ Create the `TransactionEndpoints` static class. The list endpoint uses `[AsParam
    using Microsoft.AspNetCore.Routing;
    using Personal.FinanceTracker.Finance.Application.DTOs.Requests;
    using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
-   using Personal.FinanceTracker.Finance.Application.Services;
+   using Personal.FinanceTracker.Finance.Application.Interfaces;
    using Personal.FinanceTracker.Shared.Extensions;
    using Personal.FinanceTracker.Shared.Filters;
    using Personal.FinanceTracker.Shared.Models;
@@ -2141,7 +2133,7 @@ Create the `TransactionEndpoints` static class. The list endpoint uses `[AsParam
 
 ### Task 22 — Register Finance Module in DependencyInjection and Program.cs
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `DependencyInjection` static class for the Finance module (matching the Users module pattern) and wire it into `Program.cs`. This registers the `FinanceDbContext`, all repositories, services, validators, and maps all endpoints.
@@ -2161,7 +2153,7 @@ Create the `DependencyInjection` static class for the Finance module (matching t
    using Personal.FinanceTracker.Finance.Infrastructure.Data;
    using Personal.FinanceTracker.Finance.Infrastructure.Repositories;
    using Personal.FinanceTracker.Finance.Infrastructure.Services;
-   using Personal.FinanceTracker.Finance.Application.Services;
+   using Personal.FinanceTracker.Finance.Application.Interfaces;
 
    namespace Personal.FinanceTracker.Finance;
 
@@ -3519,7 +3511,7 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
 - [ ] `GET /api/categories` returns all categories for the authenticated user
 - [ ] `POST /api/categories` creates a category; returns 409 if the name already exists
 - [ ] `PUT /api/categories/{id}` updates a category; returns 404 if not owned by the user
-- [ ] `DELETE /api/categories/{id}` deletes a category; transactions referencing it become uncategorized
+- [ ] `DELETE /api/categories/{id}` soft-deletes a category; it disappears from lists and its name can be reused
 - [ ] `GET /api/transactions?page=1&pageSize=20` returns a paginated list of transactions
 - [ ] `GET /api/transactions?type=Expense&categoryId={guid}` returns filtered transactions
 - [ ] `POST /api/transactions` creates a transaction; returns 400 if the category does not belong to the user
@@ -3535,4 +3527,4 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
 
 ---
 
-*Last updated: 22/06/2026*
+*Last updated: 31/08/2026*

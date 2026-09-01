@@ -59,6 +59,11 @@ public sealed class TransactionConfiguration : IEntityTypeConfiguration<Transact
             .HasColumnName("updated_at")
             .HasColumnType("timestamptz");
 
+        builder.Property(t => t.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .IsRequired();
+
         builder.HasOne<Category>()
             .WithMany()
             .HasForeignKey(t => t.CategoryId)

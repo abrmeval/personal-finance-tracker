@@ -40,7 +40,7 @@ public static class CategoryEndpoints
 
         group.MapDelete("/{id:guid}", DeleteAsync)
             .WithName("DeleteCategory")
-            .WithDescription("Delete a category. Transactions referencing it will have their category set to null.");
+            .WithDescription("Soft-delete a category. It is excluded from lists and lookups; transactions keep their category reference.");
 
         return app;
     }

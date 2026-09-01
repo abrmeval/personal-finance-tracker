@@ -43,11 +43,17 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .HasColumnName("updated_at")
             .HasColumnType("timestamptz");
 
+        builder.Property(c => c.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .IsRequired();
+
         builder.HasIndex(c => c.UserId)
             .HasDatabaseName("idx_categories_user_id");
 
         builder.HasIndex(c => new { c.UserId, c.Name })
             .IsUnique()
-            .HasDatabaseName("idx_categories_user_name");
+            .HasDatabaseName("idx_categories_user_name")
+            .HasFilter("is_active");
     }
 }
