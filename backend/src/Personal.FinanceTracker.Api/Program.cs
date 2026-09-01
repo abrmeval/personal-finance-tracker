@@ -57,7 +57,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 builder.Services.AddUsersModule(builder.Configuration);
-// builder.Services.AddFinanceModule(builder.Configuration);
+builder.Services.AddFinanceModule(builder.Configuration);
 // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
 
 // TODO Sprint 6: builder.Services.AddOpenTelemetry(...)

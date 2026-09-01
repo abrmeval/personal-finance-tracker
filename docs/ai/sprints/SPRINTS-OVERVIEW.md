@@ -104,7 +104,7 @@ Users can register and log in. JWT-protected routes work end-to-end. Frontend ha
 
 **Duration:** 2 weeks
 **Doc:** [sprint-2.md](./sprint-2.md)
-**Status:** In Progress
+**Status:** In Progress (backend complete — frontend Tasks 23–28 remaining)
 
 ### Goals
 Full CRUD for transactions and categories, connected front-to-back with pagination, filtering, and cache-invalidated queries.
@@ -245,4 +245,4 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 
 ---
 
-*Last updated: 02/06/2026*
+*Last updated: 31/08/2026*

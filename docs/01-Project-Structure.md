@@ -147,14 +147,13 @@ backend/src/Modules/Users/          ← Implemented (Sprint 1)
 │       └── 📄 IUserRepository.cs
 │
 ├── 📁 Application/
-│   ├── 📁 DTOs/
-│   │   ├── 📁 Requests/
-│   │   │   ├── 📄 LoginRequest.cs
-│   │   │   ├── 📄 RegisterRequest.cs
-│   │   │   └── 📄 RefreshTokenRequest.cs
-│   │   └── 📁 Responses/
-│   │       ├── 📄 AuthResponse.cs
-│   │       └── 📄 UserResponse.cs
+│   ├── 📁 DTOs.Requests/          ← Request records (dot-style folder naming)
+│   │   ├── 📄 LoginRequest.cs
+│   │   ├── 📄 RegisterRequest.cs
+│   │   └── 📄 RefreshTokenRequest.cs
+│   ├── 📁 DTOs.Responses/
+│   │   ├── 📄 AuthResponse.cs
+│   │   └── 📄 UserResponse.cs
 │   ├── 📁 Interfaces/             ← Service + settings contracts
 │   │   ├── 📄 IJwtSettings.cs
 │   │   ├── 📄 ITokenService.cs
@@ -181,7 +180,7 @@ backend/src/Modules/Users/          ← Implemented (Sprint 1)
 │
 ├── 📁 Api/
 │   └── 📁 Endpoints/
-│       └── 📄 AuthEnpoints.cs     ← Note: filename typo (missing 'd')
+│       └── 📄 AuthEndpoints.cs
 │
 └── 📄 DependencyInjection.cs      ← AddUsersModule + MapUsersEndpoints
 ```
@@ -191,7 +190,7 @@ backend/src/Modules/Users/          ← Implemented (Sprint 1)
 > respectively. Their contracts (`IUserService`, `ITokenService`) remain in `Application/Interfaces/`,
 > maintaining correct dependency flow.
 
-### Finance Module Example (planned — Sprint 2)
+### Finance Module (built — Sprint 2)
 
 ```
 backend/src/Modules/Finance/
@@ -199,55 +198,56 @@ backend/src/Modules/Finance/
 ├── 📁 Domain/                           # Core business logic (no dependencies)
 │   ├── 📁 Entities/
 │   │   ├── 📄 Transaction.cs
-│   │   ├── 📄 Category.cs
-│   │   └── 📄 Budget.cs
+│   │   └── 📄 Category.cs
 │   ├── 📁 Enums/
-│   │   ├── 📄 TransactionType.cs
-│   │   └── 📄 BudgetPeriod.cs
+│   │   └── 📄 TransactionType.cs
 │   └── 📁 Interfaces/
 │       ├── 📄 ITransactionRepository.cs
-│       └── 📄 IBudgetRepository.cs
+│       └── 📄 ICategoryRepository.cs
 │
 ├── 📁 Application/                      # Use cases and business rules
-│   ├── 📁 Services/
-│   │   ├── 📄 TransactionService.cs
-│   │   ├── 📄 CategoryService.cs
-│   │   └── 📄 BudgetService.cs
-│   ├── 📁 DTOs/
-│   │   ├── 📁 Requests/
-│   │   │   ├── 📄 CreateTransactionRequest.cs
-│   │   │   └── 📄 UpdateBudgetRequest.cs
-│   │   └── 📁 Responses/
-│   │       ├── 📄 TransactionResponse.cs
-│   │       └── 📄 BudgetSummaryResponse.cs
-│   ├── 📁 Validators/
-│   │   ├── 📄 CreateTransactionValidator.cs
-│   │   └── 📄 UpdateBudgetValidator.cs
-│   └── 📁 Mapping/
-│       └── 📄 FinanceMappingProfile.cs
+│   ├── 📁 DTOs.Requests/                # Request records (dot-style, matching Users module)
+│   │   ├── 📄 CreateCategoryRequest.cs
+│   │   ├── 📄 UpdateCategoryRequest.cs
+│   │   ├── 📄 CreateTransactionRequest.cs
+│   │   ├── 📄 UpdateTransactionRequest.cs
+│   │   └── 📄 TransactionQueryParams.cs
+│   ├── 📁 DTOs.Responses/
+│   │   ├── 📄 CategoryResponse.cs
+│   │   └── 📄 TransactionResponse.cs
+│   ├── 📁 Interfaces/                   # Service contracts
+│   │   ├── 📄 ICategoryService.cs
+│   │   └── 📄 ITransactionService.cs
+│   └── 📁 Validators/
+│       ├── 📄 CreateCategoryValidator.cs
+│       ├── 📄 UpdateCategoryValidator.cs
+│       ├── 📄 CreateTransactionValidator.cs
+│       └── 📄 UpdateTransactionValidator.cs
 │
 ├── 📁 Infrastructure/                   # External concerns (DB, external services)
 │   ├── 📁 Data/
 │   │   ├── 📄 FinanceDbContext.cs
-│   │   └── 📁 Configurations/
-│   │       ├── 📄 TransactionConfiguration.cs
-│   │       ├── 📄 CategoryConfiguration.cs
-│   │       └── 📄 BudgetConfiguration.cs
+│   │   ├── 📁 Configurations/
+│   │   │   ├── 📄 CategoryConfiguration.cs
+│   │   │   └── 📄 TransactionConfiguration.cs
+│   │   └── 📁 Migrations/               # EF Core migrations (finances schema)
 │   ├── 📁 Repositories/
-│   │   ├── 📄 TransactionRepository.cs
-│   │   └── 📄 BudgetRepository.cs
-│   └── 📁 Migrations/
-│       └── 📄 (EF Core migrations)
+│   │   ├── 📄 CategoryRepository.cs
+│   │   └── 📄 TransactionRepository.cs
+│   └── 📁 Services/
+│       ├── 📄 CategoryService.cs        # Infrastructure; implements ICategoryService
+│       └── 📄 TransactionService.cs     # Infrastructure; implements ITransactionService
 │
 ├── 📁 Api/                              # HTTP layer
 │   └── 📁 Endpoints/
-│       ├── 📄 TransactionEndpoints.cs
 │       ├── 📄 CategoryEndpoints.cs
-│       └── 📄 BudgetEndpoints.cs
+│       └── 📄 TransactionEndpoints.cs
 │
-├── 📄 FinanceModule.cs                  # Module registration & DI setup
-└── 📄 Finance.csproj                    # Project file
+├── 📄 DependencyInjection.cs            # AddFinanceModule + MapFinanceEndpoints
+└── 📄 Personal.FinanceTracker.Finance.csproj
 ```
+
+> Budget entities (`Budget`, `BudgetPeriod`, `IBudgetRepository`, `BudgetService`) are planned for Sprint 3 and will follow the same structure.
 
 ### Layer Responsibilities
 
@@ -441,3 +441,5 @@ csharp_style_var_when_type_is_apparent = true
 ---
 
 *Next: [02-Backend-Documentation.md](./02-Backend-Documentation.md)*
+
+*Last Updated: 31 Aug 2026*
