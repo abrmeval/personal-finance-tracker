@@ -16,7 +16,7 @@ description: |
   - PR opened against main → workflow invokes this agent automatically
   - User asks 'review this code against our patterns' → invoke this agent
   - User asks 'are the docs compliant?' → invoke this agent
-model: opencode-go/glm-5.2
+model: opencode-go/muse-spark-1.3-contributor
 permission:
   read: allow
   glob: allow
