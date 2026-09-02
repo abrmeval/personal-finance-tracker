@@ -5,7 +5,7 @@ description: |
   frontend/backend best practices, and documentation standards. Produces a structured
   report listing every issue found with its location, description, and remediation.
 
-  Invoked automatically by the `code-review.yml` GitHub Actions workflow on every
+  Invoked automatically by the `opencode.yml` GitHub Actions workflow on every
   pull request targeting `main`. Can also be invoked manually with:
   - 'review my PR'
   - 'review code against guidelines'
@@ -17,6 +17,7 @@ description: |
   - User asks 'review this code against our patterns' → invoke this agent
   - User asks 'are the docs compliant?' → invoke this agent
 model: opencode-go/muse-spark-1.2-contributor
+mode: primary
 permission:
   read: allow
   glob: allow
