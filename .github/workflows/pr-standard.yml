@@ -183,7 +183,7 @@ jobs:
             }
 
             commentLines.push(
-              '<sub>Automated by the `pr-standard` workflow — edit the PR title or description and this comment updates automatically.</sub>'
+              '<sub>Automated by the `pr-standard` workflow — this check is required for merging into `main`. Edit the PR title or description and this comment updates automatically.</sub>'
             );
 
             const commentBody = commentLines.join('\n');
@@ -218,3 +218,13 @@ jobs:
             }
 
             core.info('PR standard check: ' + passedCount + '/' + checks.length + ' checks passed');
+
+            if (failed.length > 0) {
+              core.setFailed(
+                'PR does not meet the title and description requirements — ' +
+                  failed.length +
+                  ' check' +
+                  (failed.length === 1 ? '' : 's') +
+                  ' failed. See the "PR Standard Check" comment on this PR for details.'
+              );
+            }
