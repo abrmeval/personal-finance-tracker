@@ -41,18 +41,24 @@ public sealed class TransactionRepository(FinanceDbContext context) : ITransacti
     }
 
     public async Task<Transaction?> GetByIdAsync(Guid id, CancellationToken ct = default)
-        => await context.Transactions.FirstOrDefaultAsync(t => t.Id == id, ct);
+        => await context.Transactions.FirstOrDefaultAsync(t => t.Id == id && t.IsActive, ct);
 
     public async Task<Transaction?> GetByUserAndIdAsync(Guid userId, Guid id, CancellationToken ct = default)
         => await context.Transactions
-            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId, ct);
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId && t.IsActive, ct);
 
     public async Task<bool> ExistsByUserAndIdAsync(Guid userId, Guid id, CancellationToken ct = default)
         => await context.Transactions
-            .AnyAsync(t => t.Id == id && t.UserId == userId, ct);
+            .AnyAsync(t => t.Id == id && t.UserId == userId && t.IsActive, ct);
 
     public async Task AddAsync(Transaction transaction, CancellationToken ct = default)
         => await context.Transactions.AddAsync(transaction, ct);
+
+    public Task DeleteAsync(Transaction transaction, CancellationToken ct = default)
+    {
+        transaction.Deactivate();
+        return Task.CompletedTask;
+    }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
         => await context.SaveChangesAsync(ct);
@@ -68,6 +74,7 @@ public sealed class TransactionRepository(FinanceDbContext context) : ITransacti
             .Where(t => t.UserId == userId
                 && t.CategoryId == categoryId
                 && t.Type == TransactionType.Expense
+                && t.IsActive
                 && t.Date >= from
                 && t.Date <= to)
             .SumAsync(t => t.Amount, ct);
@@ -80,7 +87,7 @@ public sealed class TransactionRepository(FinanceDbContext context) : ITransacti
         Guid? categoryId,
         TransactionType? type)
     {
-        var query = context.Transactions.Where(t => t.UserId == userId);
+        var query = context.Transactions.Where(t => t.UserId == userId && t.IsActive);
 
         if (startDate.HasValue)
             query = query.Where(t => t.Date >= startDate.Value);

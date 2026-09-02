@@ -27,6 +27,7 @@ public interface ITransactionRepository
     Task<Transaction?> GetByUserAndIdAsync(Guid userId, Guid id, CancellationToken ct = default);
     Task<bool> ExistsByUserAndIdAsync(Guid userId, Guid id, CancellationToken ct = default);
     Task AddAsync(Transaction transaction, CancellationToken ct = default);
+    Task DeleteAsync(Transaction transaction, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 
     /// <summary>

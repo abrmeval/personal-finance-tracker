@@ -2241,18 +2241,18 @@ Update `src/components/layout/Header.tsx` to show the logged-in user's first nam
 
 ---
 
-## Aditional steps added by Me:
-- Make use of the ioptions páttern
-- Create an abstraction to return a respopnse to the client in the same formart for all endpoints
-- Create an abstraction for services response 
-- Create an abstraction for repositories response
+## Additional steps added by me:
+- Make use of the `IOptions` pattern
+- Create an abstraction to return a response to the client in the same format for all endpoints
+- Create an abstraction for service responses
+- Create an abstraction for repository responses
 - Verify project structure
-- show validation errros form server
-- Modify ApiError class as  the same format of ProblemDetails object from server
-- Modify middleware to return same format response
+- Show validation errors from the server
+- Modify the `ApiError` class to match the `ProblemDetails` object format from the server
+- Modify middleware to return the same response format
 
 # Progress:
-- Until Task 14 Done
+- Completed up to Task 14
 
 ## Definition of Done
 

@@ -12,6 +12,7 @@ public sealed class Transaction : Entity
     public TransactionType Type { get; private set; }
     public DateTime Date { get; private set; }
     public string? Notes { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     private Transaction() { }
 
@@ -83,6 +84,11 @@ public sealed class Transaction : Entity
             : date.ToUniversalTime();
         CategoryId = categoryId;
         Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+    public void Deactivate()
+    {
+        IsActive = false;
         UpdatedAt = DateTime.UtcNow;
     }
 }

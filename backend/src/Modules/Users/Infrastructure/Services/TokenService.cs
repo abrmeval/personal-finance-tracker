@@ -2,7 +2,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Personal.FinanceTracker.Users.Application.Interfaces;
 using Personal.FinanceTracker.Users.Domain.Entities;

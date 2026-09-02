@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "dotenv -e .env -- vite --debug",
     "build": "tsc -b && dotenv -e .env -- vite build",
+    "build-lint": "eslint . && tsc -b && dotenv -e .env -- vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "serve": "npm run build && npm run preview"

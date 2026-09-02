@@ -4,7 +4,7 @@ on:
   issue_comment:
     types: [created]
   pull_request_review_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   opencode:
@@ -30,4 +30,16 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: opencode-go/kimi-k2.6
+          model: opencode-go/muse-spark-1.2-contributor
+          agent: code-reviewer
+          prompt: |
+            Scope:
+            Every file changed in this PR under `backend/`, `frontend/`,  and `docs/`.
+            Apply the full backend, frontend, documentation, and CI/CD checklists from your system prompt.
+            Requirements:
+              - First of all, read the `code-reviewer.md` file to understand the review process.
+              - Read every mandatory reference file listed in your instructions before flagging any rule.
+              - Each finding must cite: Severity, Category, Location (`file:line`), Rule violated, Description, How to fix.
+              - "How to fix" must be actionable — show the corrected code or the exact change to make.
+              - Do not flag issues that are not backed by a rule from `AGENTS.md` or `docs/`.
+              - Do not modify any files. You are read-only.'

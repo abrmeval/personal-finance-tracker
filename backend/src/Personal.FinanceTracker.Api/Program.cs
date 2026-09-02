@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Personal.FinanceTracker.Finance;
 using Personal.FinanceTracker.Shared.Middleware;
 using Personal.FinanceTracker.Users;
 using Scalar.AspNetCore;
@@ -56,7 +57,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddHealthChecks();
 
 builder.Services.AddUsersModule(builder.Configuration);
-// builder.Services.AddFinanceModule(builder.Configuration);
+builder.Services.AddFinanceModule(builder.Configuration);
 // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
 
 // TODO Sprint 6: builder.Services.AddOpenTelemetry(...)
@@ -91,7 +92,7 @@ app.MapHealthChecks("/health/ready");
 
 
 app.MapUsersEndpoints();
-// app.MapFinanceEndpoints();
+app.MapFinanceEndpoints();
 
 // TODO Sprint 4: app.MapReportingEndpoints();
 

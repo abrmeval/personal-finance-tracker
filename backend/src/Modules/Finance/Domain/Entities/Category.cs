@@ -51,4 +51,10 @@ public sealed class Category : Entity
         Color = string.IsNullOrWhiteSpace(color) ? null : color.Trim();
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

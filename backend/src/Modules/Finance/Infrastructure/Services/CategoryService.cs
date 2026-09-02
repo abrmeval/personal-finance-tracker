@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Personal.FinanceTracker.Finance.Application.DTOs.Requests;
 using Personal.FinanceTracker.Finance.Application.DTOs.Responses;
-using Personal.FinanceTracker.Finance.Application.Services;
+using Personal.FinanceTracker.Finance.Application.Interfaces;
 using Personal.FinanceTracker.Finance.Domain.Entities;
 using Personal.FinanceTracker.Finance.Domain.Interfaces;
 using Personal.FinanceTracker.Shared.Constants;

@@ -1,6 +1,6 @@
 ---
 name: dotnet-best-practices
-description: 'Ensure .NET/C# code meets best practices for the solution/project. Use this skill when  the user asks to review, improve or refactor .NET/C# code to align with best practices. This skill is essential for maintaining code quality, readability, and maintainability.'
+description: 'Ensure .NET/C# code meets best practices for the solution/project. Use this skill when the user asks to review, improve or refactor .NET/C# code to align with best practices. This skill is essential for maintaining code quality, readability, and maintainability.'
 compatibility: opencode
 ---
 

@@ -29,7 +29,6 @@ Everything must be built. The documentation in `docs/` provides copy-ready code 
 | [1](#sprint-1--users-module--authentication) | Users Module / Authentication | 1.5 weeks | Register, login, JWT-protected routes working end-to-end |
 | [2](#sprint-2--finance-module-transactions--categories) | Finance Module: Transactions & Categories | 2 weeks | Core CRUD fully connected front-to-back with pagination and filtering |
 | [3](#sprint-3--finance-module-budgets) | Finance Module: Budgets | 1 week | Budget tracking with period-based spending calculations |
-
 | [4](#sprint-4--reporting-module--dashboard) | Reporting Module & Dashboard | 1.5 weeks | Dashboard with charts; background jobs running |
 | [5](#sprint-5--testing) | Testing | 1 week | Unit + integration coverage on all critical paths |
 | [6](#sprint-6--devops--infrastructure) | DevOps & Infrastructure | 1 week | CI/CD pipeline live; production deployed on Azure |
@@ -104,7 +103,7 @@ Users can register and log in. JWT-protected routes work end-to-end. Frontend ha
 
 **Duration:** 2 weeks
 **Doc:** [sprint-2.md](./sprint-2.md)
-**Status:** In Progress
+**Status:** In Progress (Tasks 1–28 complete — pending commit, end-to-end runtime verification, and designer-enforcer review)
 
 ### Goals
 Full CRUD for transactions and categories, connected front-to-back with pagination, filtering, and cache-invalidated queries.
@@ -245,4 +244,4 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 
 ---
 
-*Last updated: 02/06/2026*
+*Last updated: 01/09/2026*
