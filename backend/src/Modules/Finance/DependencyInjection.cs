@@ -32,7 +32,7 @@ public static class DependencyInjection
                         errorCodesToAdd: null);
                     npgsqlOptions.CommandTimeout(30);
                 }));
-        
+
         // Repositories
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
