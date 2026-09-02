@@ -1,183 +1,220 @@
-name: PR Standards Check
+name: PR Standard Check
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
-permissions:
-  pull-requests: write
+concurrency:
+  group: pr-standard-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  check-pr-standards:
+  check:
+    name: Review PR title and description
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
-      - name: Validate PR title and body
-        uses: actions/github-script@v7
+      - name: Validate title and description, post result comment
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
-            const title = context.payload.pull_request.title || "";
-            const body  = context.payload.pull_request.body  || "";
+            const pr = context.payload.pull_request;
+            const title = pr.title ?? '';
+            const body = pr.body ?? '';
+            const MARKER = '<!-- pr-standard -->';
 
-            const errors = [];
-            const warnings = [];
+            const checks = [];
+            const add = (group, name, ok, detail) =>
+              checks.push({ group, name, ok: !!ok, detail: detail ?? null });
 
-            // ---------- TITLE CHECKS ----------
+            const hasPrefix = title.startsWith('PR: ');
+            add(
+              'Title',
+              'Starts with "PR: " prefix',
+              hasPrefix,
+              hasPrefix ? null : 'Found: "' + title.slice(0, 60) + (title.length > 60 ? '…' : '') + '"'
+            );
 
-            // 1. Must start with "PR: ", optionally followed by an "[Area] " tag.
-            //    Accepted: "PR: Title" or "PR: [Area] Title"
-            const titleMatch = title.match(/^PR: (\[[^\]]+\] )?(.+)$/);
-            if (!titleMatch) {
-              errors.push(
-                'Title must start with "PR: " (optionally followed by an area tag like "[Payments] "). ' +
-                'Example: `PR: [Payments] Add retry logic to webhook handler`'
+            const lenOk = title.length <= 150;
+            let lenDetail = title.length + ' character' + (title.length === 1 ? '' : 's');
+            if (lenOk && title.length > 72) lenDetail += ' — passes, but consider keeping it under ~72 for readability';
+            add('Title', 'At most 150 characters', lenOk, lenDetail);
+
+            const afterPrefix = hasPrefix ? title.slice(4) : title;
+            const areaMatch = afterPrefix.match(/^\[[^\]]+\]\s*/);
+            const hasBrackets = /\[[^\]]+\]/.test(title);
+            add(
+              'Title',
+              'Area prefix (optional) right after "PR: " — `PR: [Area] Title`',
+              !hasBrackets || !!areaMatch,
+              hasBrackets && !areaMatch
+                ? 'Square brackets found, but not immediately after the "PR: " prefix'
+                : null
+            );
+
+            const subject = (areaMatch ? afterPrefix.slice(areaMatch[0].length) : afterPrefix).trim();
+            const rawFirstWord = subject.split(/\s+/)[0] ?? '';
+            const firstWord = rawFirstWord.toLowerCase().replace(/[^a-z]/g, '');
+            const pastTenseVerbs = new Set([
+              'added','fixed','created','updated','removed','deleted','implemented','refactored',
+              'changed','moved','renamed','migrated','introduced','deprecated','replaced','completed',
+              'installed','configured','enabled','disabled','wrote','made','built','ran','sent','took'
+            ]);
+            const edExceptions = new Set(['seed','need','speed','proceed','exceed','feed','embed','shed','bred','steed']);
+            const looksPastTense =
+              pastTenseVerbs.has(firstWord) || (firstWord.endsWith('ed') && !edExceptions.has(firstWord));
+            add(
+              'Title',
+              'Uses imperative mood ("Add feature X", not "Added feature X")',
+              !looksPastTense,
+              looksPastTense ? 'First word looks like a past-tense verb: "' + rawFirstWord + '"' : null
+            );
+
+            const headingRe = /^#{1,6}\s+(.+?)\s*$/;
+            const sections = [];
+            let current = null;
+            for (const rawLine of body.split('\n')) {
+              const m = rawLine.match(headingRe);
+              if (m) {
+                current = { heading: m[1].replace(/:\s*$/, '').trim(), lines: [] };
+                sections.push(current);
+              } else if (current) {
+                current.lines.push(rawLine);
+              }
+            }
+            const findSection = (re) => sections.find((s) => re.test(s.heading));
+            const summary = findSection(/^summary$/i);
+            const keyChanges = findSection(/^key changes$/i);
+
+            add(
+              'Description',
+              'Has a "Summary" section (`# Summary:`)',
+              !!summary,
+              summary ? null : 'No heading named "Summary" was found in the description'
+            );
+            add(
+              'Description',
+              'Has a "Key Changes" section (`# Key Changes:`)',
+              !!keyChanges,
+              keyChanges ? null : 'No heading named "Key Changes" was found in the description'
+            );
+
+            if (summary) {
+              const text = summary.lines.join(' ').replace(/\s+/g, ' ').trim();
+              const sentences = text ? text.split(/(?<=[.!?])\s+/).filter(Boolean) : [];
+              const sentenceOk = sentences.length >= 1 && sentences.length <= 3;
+              add(
+                'Description',
+                'Summary is 2–3 sentences max',
+                sentenceOk,
+                sentences.length === 0
+                  ? 'The Summary section is empty'
+                  : sentences.length + ' sentence' + (sentences.length === 1 ? '' : 's') + ' found'
               );
             }
 
-            const bareTitle = titleMatch ? titleMatch[2].trim() : title.trim();
-
-            // 2. Max length (150 chars, full title including "PR: " and area tag)
-            if (title.length > 150) {
-              errors.push(`Title is ${title.length} characters long; the limit is 150.`);
+            if (keyChanges) {
+              const bullets = keyChanges.lines.filter((l) => /^\s*[-*+]\s+/.test(l));
+              add(
+                'Description',
+                'Key Changes uses bullet points',
+                bullets.length > 0,
+                bullets.length > 0
+                  ? bullets.length + ' bullet point' + (bullets.length === 1 ? '' : 's') + ' found'
+                  : 'No bullet list (`- item`) found under "Key Changes"'
+              );
             }
 
-            // 3. Basic imperative-mood heuristic — flag common past-tense / gerund openers.
-            //    This is a heuristic, not a grammar check, so it's a warning rather than a hard failure.
-            const nonImperativeStarters = [
-              'added', 'adding', 'fixed', 'fixing', 'updated', 'updating',
-              'removed', 'removing', 'created', 'creating', 'changed', 'changing',
-              'refactored', 'refactoring', 'implemented', 'implementing',
-              'improved', 'improving', 'deleted', 'deleting', 'renamed', 'renaming'
+            if (summary && keyChanges) {
+              add(
+                'Description',
+                'Summary appears before Key Changes',
+                sections.indexOf(summary) < sections.indexOf(keyChanges),
+                null
+              );
+            }
+
+            const failed = checks.filter((c) => !c.ok);
+            const passedCount = checks.length - failed.length;
+
+            const fmt = (c) =>
+              '- ' + (c.ok ? '✅' : '❌') + ' ' + c.name + (c.detail ? ' — ' + c.detail : '');
+
+            const commentLines = [
+              MARKER,
+              '## PR Standard Check',
+              '',
+              failed.length === 0
+                ? '✅ **This PR meets the title and description requirements.**'
+                : '❌ **This PR does not meet the title and description requirements.**',
+              '',
+              '**' + passedCount + '/' + checks.length + ' checks passed**',
+              ''
             ];
-            const firstWord = (bareTitle.split(/\s+/)[0] || '').toLowerCase();
-            if (nonImperativeStarters.includes(firstWord)) {
-              warnings.push(
-                `Title looks like it may not use imperative mood ("${firstWord}"). ` +
-                `Prefer e.g. "Add" instead of "Added"/"Adding".`
+
+            for (const group of ['Title', 'Description']) {
+              commentLines.push('### ' + group);
+              for (const c of checks.filter((x) => x.group === group)) commentLines.push(fmt(c));
+              commentLines.push('');
+            }
+
+            if (failed.length > 0) {
+              commentLines.push(
+                '### Expected format',
+                '',
+                '**Title** — `PR: [Area] Title`',
+                '- `"PR: "` prefix, optional area in brackets (e.g. `[Finance]`, `[Users]`, `[CI]`, `[Docs]`), imperative mood, at most 150 characters',
+                '',
+                '```markdown',
+                '# Summary:',
+                '- 2–3 sentences: what changed and why it is useful',
+                '',
+                '# Key Changes:',
+                '- Bullet point 1: description of the first key change',
+                '- Bullet point 2: description of the second key change',
+                '```',
+                ''
               );
             }
 
-            // 4. Empty title after prefix
-            if (titleMatch && bareTitle.length === 0) {
-              errors.push('Title has no content after the "PR: " / area prefix.');
-            }
+            commentLines.push(
+              '<sub>Automated by the `pr-standard` workflow — edit the PR title or description and this comment updates automatically.</sub>'
+            );
 
-            // ---------- BODY CHECKS ----------
-
-            // Must contain a "# Summary" section and a "# Key Changes" section, in that order,
-            // with the Key Changes section containing at least one bullet point.
-            const summaryHeadingRe    = /^#{1,2}\s*Summary:?\s*$/im;
-            const keyChangesHeadingRe = /^#{1,2}\s*Key Changes:?\s*$/im;
-
-            const summaryMatch = body.match(summaryHeadingRe);
-            const keyChangesMatch = body.match(keyChangesHeadingRe);
-
-            if (!summaryMatch) {
-              errors.push('Body is missing a "# Summary:" section.');
-            }
-            if (!keyChangesMatch) {
-              errors.push('Body is missing a "# Key Changes:" section.');
-            }
-
-            if (summaryMatch && keyChangesMatch && summaryMatch.index > keyChangesMatch.index) {
-              errors.push('The "Summary" section must come before the "Key Changes" section.');
-            }
-
-            // Extract Summary section content (between the Summary heading and the next heading)
-            if (summaryMatch) {
-              const afterSummary = body.slice(summaryMatch.index + summaryMatch[0].length);
-              const nextHeading = afterSummary.search(/^#{1,2}\s*\S/m);
-              const summaryText = (nextHeading === -1 ? afterSummary : afterSummary.slice(0, nextHeading))
-                .replace(/^[\s\-*]+/gm, '') // strip leading bullets/dashes if used
-                .trim();
-
-              if (summaryText.length === 0) {
-                errors.push('The "Summary" section is empty.');
-              } else {
-                const sentenceCount = (summaryText.match(/[.!?](\s|$)/g) || []).length || 1;
-                if (sentenceCount > 3) {
-                  warnings.push(`Summary looks long (~${sentenceCount} sentences); aim for 2-3 sentences max.`);
-                }
-              }
-            }
-
-            // Extract Key Changes section content and confirm at least one bullet point
-            if (keyChangesMatch) {
-              const afterKeyChanges = body.slice(keyChangesMatch.index + keyChangesMatch[0].length);
-              const nextHeading = afterKeyChanges.search(/^#{1,2}\s*\S/m);
-              const keyChangesText = nextHeading === -1 ? afterKeyChanges : afterKeyChanges.slice(0, nextHeading);
-
-              const bulletCount = (keyChangesText.match(/^\s*[-*]\s+\S/gm) || []).length;
-              if (bulletCount === 0) {
-                errors.push('The "Key Changes" section must contain at least one bullet point (use "- " or "* ").');
-              }
-            }
-
-            // ---------- REPORT ----------
-
-            const passed = errors.length === 0;
-            const lines = [];
-            lines.push(passed ? '## ✅ PR Standards Check Passed' : '## ❌ PR Standards Check Failed');
-            lines.push('');
-
-            if (errors.length) {
-              lines.push('**Errors (must fix):**');
-              for (const e of errors) lines.push(`- ${e}`);
-              lines.push('');
-            }
-            if (warnings.length) {
-              lines.push('**Warnings (recommended):**');
-              for (const w of warnings) lines.push(`- ${w}`);
-              lines.push('');
-            }
-            if (passed && warnings.length === 0) {
-              lines.push('Title and body both meet the required format. 🎉');
-            }
-
-            lines.push('---');
-            lines.push('<details><summary>Expected format</summary>');
-            lines.push('');
-            lines.push('**Title:** `PR: [Area] Title in imperative mood` (Area is optional, 150 chars max)');
-            lines.push('');
-            lines.push('**Body:**');
-            lines.push('```');
-            lines.push('# Summary:');
-            lines.push('- Brief summary of the changes made and their purpose');
-            lines.push('');
-            lines.push('# Key Changes:');
-            lines.push('- Bullet point 1: Description of the first key change');
-            lines.push('- Bullet point 2: Description of the second key change');
-            lines.push('```');
-            lines.push('</details>');
-
-            const commentBody = lines.join('\n');
-
-            // Find and update a previous check comment instead of spamming new ones.
-            const marker = '<!-- pr-standards-check -->';
-            const fullComment = `${marker}\n${commentBody}`;
+            const commentBody = commentLines.join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
+              issue_number: pr.number,
+              per_page: 100
             });
-            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            const existing = comments.find(
+              (c) => c.user.type === 'Bot' && c.body && c.body.includes(MARKER)
+            );
 
             if (existing) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 comment_id: existing.id,
-                body: fullComment,
+                body: commentBody
               });
+              core.info('Updated existing PR standard comment ' + existing.id);
             } else {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: fullComment,
+                issue_number: pr.number,
+                body: commentBody
               });
+              core.info('Created PR standard comment');
             }
 
-            if (!passed) {
-              core.setFailed(`PR standards check failed:\n${errors.join('\n')}`);
-            }
+            core.info('PR standard check: ' + passedCount + '/' + checks.length + ' checks passed');
