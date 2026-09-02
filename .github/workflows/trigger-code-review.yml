@@ -27,5 +27,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: '/oc review this PR against the Personal Finance Tracker guidelines.'
+              body: '/opencode review this PR against the Personal Finance Tracker guidelines.'
             });
