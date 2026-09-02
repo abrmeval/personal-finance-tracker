@@ -3,7 +3,7 @@ name: PR Standard Check
 on:
   pull_request:
     branches: [main]
-    types: [opened, edited, reopened, ready_for_review]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: pr-standard-${{ github.event.pull_request.number }}
@@ -17,7 +17,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      issues: write
 
     steps:
       - name: Validate title and description, post result comment

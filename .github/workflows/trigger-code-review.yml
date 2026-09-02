@@ -16,7 +16,6 @@ jobs:
     if: github.event.pull_request.draft == false
     permissions:
       pull-requests: write
-      issues: write
 
     steps:
       - name: Post review trigger comment
