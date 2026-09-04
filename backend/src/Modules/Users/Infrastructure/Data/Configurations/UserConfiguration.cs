@@ -39,6 +39,10 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.UpdatedAt)
             .HasColumnName("updated_at")
             .HasColumnType("timestamptz");  // stores as UTC in PostgreSQL
+        builder.Property(u => u.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .IsRequired();
         builder.HasIndex(u => u.Email)
             .IsUnique()
             .HasDatabaseName("idx_users_email");
