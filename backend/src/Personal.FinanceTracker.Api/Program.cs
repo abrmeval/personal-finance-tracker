@@ -6,6 +6,9 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Local development overrides (gitignored) — see docs/06-Local-Development.md
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 // ── Services ───────────────────────────────────────────────────    
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
