@@ -15,13 +15,13 @@ public class TransactionServiceTests
     private readonly ITransactionRepository _transactionRepo = Substitute.For<ITransactionRepository>();
     private readonly ICategoryRepository _categoryRepo = Substitute.For<ICategoryRepository>();
     private readonly ILogger<TransactionService> _logger = Substitute.For<ILogger<TransactionService>>();
-    private readonly TransactionService _sut;
+    private readonly TransactionService _transactionService;
     private static readonly Guid UserId = Guid.NewGuid();
     private static readonly Guid CategoryId = Guid.NewGuid();
 
     public TransactionServiceTests()
     {
-        _sut = new TransactionService(_transactionRepo, _categoryRepo, _logger);
+        _transactionService = new TransactionService(_transactionRepo, _categoryRepo, _logger);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class TransactionServiceTests
         _transactionRepo.CountByUserAsync(UserId, null, null, null, null, Arg.Any<CancellationToken>()).Returns(2);
         _categoryRepo.GetByIdAsync(CategoryId, Arg.Any<CancellationToken>()).Returns(Category.Create(UserId, "Food", null, null));
 
-        var result = await _sut.GetAllAsync(UserId, query);
+        var result = await _transactionService.GetAllAsync(UserId, query);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value!.TotalCount);
@@ -51,7 +51,7 @@ public class TransactionServiceTests
         _transactionRepo.GetPagedByUserAsync(UserId, 1, 20, null, null, null, null, Arg.Any<CancellationToken>()).Returns([]);
         _transactionRepo.CountByUserAsync(UserId, null, null, null, null, Arg.Any<CancellationToken>()).Returns(0);
 
-        var result = await _sut.GetAllAsync(UserId, query);
+        var result = await _transactionService.GetAllAsync(UserId, query);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value!.Page);
@@ -65,7 +65,7 @@ public class TransactionServiceTests
         _transactionRepo.GetByUserAndIdAsync(UserId, transaction.Id, Arg.Any<CancellationToken>()).Returns(transaction);
         _categoryRepo.GetByIdAsync(CategoryId, Arg.Any<CancellationToken>()).Returns(Category.Create(UserId, "Food", null, null));
 
-        var result = await _sut.GetByIdAsync(UserId, transaction.Id);
+        var result = await _transactionService.GetByIdAsync(UserId, transaction.Id);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("T1", result.Value!.Description);
@@ -78,7 +78,7 @@ public class TransactionServiceTests
         var id = Guid.NewGuid();
         _transactionRepo.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Transaction?)null);
 
-        var result = await _sut.GetByIdAsync(UserId, id);
+        var result = await _transactionService.GetByIdAsync(UserId, id);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.TransactionNotFound, result.Error!.Code);
@@ -89,7 +89,7 @@ public class TransactionServiceTests
     {
         var request = new CreateTransactionRequest("T1", 100m, TransactionType.Expense, DateTime.UtcNow, null, null);
 
-        var result = await _sut.CreateAsync(UserId, request);
+        var result = await _transactionService.CreateAsync(UserId, request);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("T1", result.Value!.Description);
@@ -104,7 +104,7 @@ public class TransactionServiceTests
         _categoryRepo.ExistsByUserAndIdAsync(UserId, CategoryId, Arg.Any<CancellationToken>()).Returns(true);
         _categoryRepo.GetByIdAsync(CategoryId, Arg.Any<CancellationToken>()).Returns(Category.Create(UserId, "Food", null, null));
 
-        var result = await _sut.CreateAsync(UserId, request);
+        var result = await _transactionService.CreateAsync(UserId, request);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(CategoryId, result.Value!.CategoryId);
@@ -116,7 +116,7 @@ public class TransactionServiceTests
         var request = new CreateTransactionRequest("T1", 100m, TransactionType.Expense, DateTime.UtcNow, CategoryId, null);
         _categoryRepo.ExistsByUserAndIdAsync(UserId, CategoryId, Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await _sut.CreateAsync(UserId, request);
+        var result = await _transactionService.CreateAsync(UserId, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.CategoryNotFound, result.Error!.Code);
@@ -130,7 +130,7 @@ public class TransactionServiceTests
         var request = new UpdateTransactionRequest("New", 150m, TransactionType.Income, DateTime.UtcNow, null, null);
         _transactionRepo.GetByUserAndIdAsync(UserId, transaction.Id, Arg.Any<CancellationToken>()).Returns(transaction);
 
-        var result = await _sut.UpdateAsync(UserId, transaction.Id, request);
+        var result = await _transactionService.UpdateAsync(UserId, transaction.Id, request);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("New", result.Value!.Description);
@@ -146,7 +146,7 @@ public class TransactionServiceTests
         var request = new UpdateTransactionRequest("New", 100m, TransactionType.Expense, DateTime.UtcNow, null, null);
         _transactionRepo.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Transaction?)null);
 
-        var result = await _sut.UpdateAsync(UserId, id, request);
+        var result = await _transactionService.UpdateAsync(UserId, id, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.TransactionNotFound, result.Error!.Code);
@@ -160,7 +160,7 @@ public class TransactionServiceTests
         _transactionRepo.GetByUserAndIdAsync(UserId, transaction.Id, Arg.Any<CancellationToken>()).Returns(transaction);
         _categoryRepo.ExistsByUserAndIdAsync(UserId, CategoryId, Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await _sut.UpdateAsync(UserId, transaction.Id, request);
+        var result = await _transactionService.UpdateAsync(UserId, transaction.Id, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.CategoryNotFound, result.Error!.Code);
@@ -172,7 +172,7 @@ public class TransactionServiceTests
         var transaction = Transaction.Create(UserId, "T1", 100m, TransactionType.Expense, DateTime.UtcNow);
         _transactionRepo.GetByUserAndIdAsync(UserId, transaction.Id, Arg.Any<CancellationToken>()).Returns(transaction);
 
-        var result = await _sut.DeleteAsync(UserId, transaction.Id);
+        var result = await _transactionService.DeleteAsync(UserId, transaction.Id);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -186,7 +186,7 @@ public class TransactionServiceTests
         var id = Guid.NewGuid();
         _transactionRepo.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Transaction?)null);
 
-        var result = await _sut.DeleteAsync(UserId, id);
+        var result = await _transactionService.DeleteAsync(UserId, id);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.TransactionNotFound, result.Error!.Code);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   useTransactions,
@@ -11,6 +11,7 @@ import { TransactionList } from "@/features/transactions/components/TransactionL
 import type { Transaction, TransactionFilters } from "@/types/finance";
 import type { TransactionFormData } from "@/features/transactions/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
+import { getErrorMessage } from "@/utils/errors";
 
 const DEFAULT_FILTERS: TransactionFilters = {
   page: 1,
@@ -18,7 +19,10 @@ const DEFAULT_FILTERS: TransactionFilters = {
 };
 
 export function TransactionsPage() {
-  setDocumentTitle("Transactions");
+  useEffect(() => {
+    setDocumentTitle("Transactions");
+  }, []);
+
   const [filters, setFilters] = useState<TransactionFilters>(DEFAULT_FILTERS);
   const { data: response, isLoading, error } = useTransactions(filters);
   const createMutation = useCreateTransaction();
@@ -29,6 +33,7 @@ export function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const pagedData = response?.data;
   const transactions = pagedData?.items ?? [];
@@ -48,6 +53,12 @@ export function TransactionsPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingTransaction(null);
+    setMutationError(null);
+  }
+
+  function handleCloseDelete() {
+    setDeleteTarget(null);
+    setMutationError(null);
   }
 
   async function handleSubmit(data: TransactionFormData) {
@@ -60,21 +71,29 @@ export function TransactionsPage() {
       notes: data.notes || null,
     };
 
-    if (editingTransaction) {
-      await updateMutation.mutateAsync({
-        id: editingTransaction.id,
-        data: payload,
-      });
-    } else {
-      await createMutation.mutateAsync(payload);
+    try {
+      if (editingTransaction) {
+        await updateMutation.mutateAsync({
+          id: editingTransaction.id,
+          data: payload,
+        });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+      handleCloseModal();
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
     }
-    handleCloseModal();
   }
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      handleCloseDelete();
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
   }
 
   function handlePageChange(newPage: number) {
@@ -143,6 +162,11 @@ export function TransactionsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {mutationError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {mutationError}
+              </div>
+            )}
             <TransactionForm
               defaultValues={
                 editingTransaction
@@ -175,9 +199,14 @@ export function TransactionsPage() {
             <p className="mt-2 text-sm text-gray-600">
               Are you sure you want to delete "{deleteTarget.description}"?
             </p>
+            {mutationError && (
+              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {mutationError}
+              </div>
+            )}
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={handleCloseDelete}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel

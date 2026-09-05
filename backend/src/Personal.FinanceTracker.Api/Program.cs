@@ -13,23 +13,11 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
-// builder.Services.AddSwaggerGen(c =>
-// {
-//     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Personal Finance Tracker API", Version = "v1" });
-
-//     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-//     {
-//         Name = "Authorization",
-//         Type = SecuritySchemeType.Http,
-//         Scheme = "bearer",
-//         BearerFormat = "JWT",
-//         In = ParameterLocation.Header
-//     });
-//     c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
-//     {
-//         [new OpenApiSecuritySchemeReference("Bearer")] = []
-//     });
-// });
+// Serialize and bind enums as strings (e.g. "Income"/"Expense") for JSON endpoints
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
   .AddJwtBearer(options =>
@@ -72,9 +60,6 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    // app.UseSwagger();
-    // app.UseSwaggerUI();
-
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
 {

@@ -1,7 +1,7 @@
 # Sprint 2 — Finance Module: Transactions & Categories
 
 **Duration:** 2 weeks (02/06/2026 — 16/06/2026)
-**Status:** In Progress (Tasks 1–28 complete — pending commit, end-to-end runtime verification, and designer-enforcer review)
+**Status:** Done
 **Overview:** [SPRINTS-OVERVIEW.md](./SPRINTS-OVERVIEW.md)
 
 ---
@@ -83,6 +83,36 @@ The backend for this sprint (Tasks 1–22) was completed on 31/08/2026; the fron
 - **Frontend — `TransactionList` formats currency and dates as `es-MX` / `MXN`** (not `en-US` / `USD` as in the Task 27 sample) — intentional localization.
 - **Frontend — page files are `CategoriesPage.tsx` and `TransactionsPage.tsx`** (plural, matching the exported component names).
 - **Frontend — a `build-lint` npm script was added** (`eslint . && tsc -b && vite build`) alongside the existing scripts.
+
+### Implementation Notes — Closure (04/09/2026)
+
+Bugs and gaps found during end-to-end verification, fixed in the closure commit:
+
+- **Enums bind/serialize as JSON strings.** `JsonStringEnumConverter` is registered via `ConfigureHttpJsonOptions` in `Program.cs`. Without it, `POST /api/transactions` with `"type": "Expense"` returned 500 (`JsonException`) and responses serialized enums as numbers.
+- **`appsettings.Local.json` is explicitly loaded** in `Program.cs` (`AddJsonFile(..., optional: true)`). ASP.NET Core does not load it by default, so the documented local-secrets mechanism never worked.
+- **`TransactionQueryParams` is a positional record with default values** (`int Page = 1, int PageSize = 20, ...`). Record property initializers do NOT make `[AsParameters]` query parameters optional — `GET /api/transactions?type=Expense` without page parameters previously threw `BadHttpRequestException` (500).
+- **`User.IsActive` is mapped** in `UserConfiguration` (`is_active`, `boolean NOT NULL DEFAULT true`) with the `AddUserIsActive` migration. The property was added in June without configuration or migration, leaving `UsersDbContext` with pending model changes that blocked its migrations entirely (the `users` schema had never been applied to the local database).
+- **`Microsoft.OpenApi` pinned to 2.7.5** — resolves NU1903 (high-severity advisory GHSA-v5pm-xwqc-g5wc) via transitive promotion. Build is back to 0 warnings.
+- **Removed unused/deprecated packages:** `Swashbuckle.AspNetCore` (all Swagger code replaced by OpenAPI + Scalar) and `FluentValidation.AspNetCore` (deprecated; modules use `FluentValidation.DependencyInjectionExtensions`).
+- **Mutation errors are surfaced** in `CategoriesPage`/`TransactionsPage` via try/catch + inline error banners (e.g., 409 duplicate category name now shows "A category with this name already exists." in the modal instead of failing silently).
+- **Timezone-stable date formatting** in `TransactionList` — dates are formatted from the UTC date part (`slice(0, 10)`) so users west of UTC no longer see transactions dated one day early.
+- **Per-route document titles** — placeholder routes use `PlaceholderPage` (`useEffect` + `setDocumentTitle`); `setDocumentTitle` moved into `useEffect` in both feature pages (was a render-time side effect).
+- **`flex-shrink-0` → `shrink-0`** in `TransactionList` (utility removed in Tailwind v4).
+
+### Deferred Audit Findings (fast-follow)
+
+From the 04/09/2026 designer-enforcer audit — not blockers, tracked for follow-up:
+
+- **C-1 (CRITICAL, deferred by owner decision):** JWT access/refresh tokens and the full user object are persisted in `localStorage` (`client.ts`, `AuthProvider.tsx`) — violates AGENTS.md security rules. Requires backend HttpOnly-cookie refresh flow + in-memory access token. Tracked in SPRINTS-OVERVIEW.md Known Gaps; must be resolved before production.
+- **m-3:** Per-error-code status mapping in update/create endpoints (duplicate name on update currently returns 404 instead of 409).
+- **m-4:** N+1 category lookups in `TransactionService.GetAllAsync` — batch into a single query.
+- **m-5:** Move `Deactivate()` calls from repositories into services (soft-delete policy is business logic).
+- **m-9:** Icon buttons and pagination controls are below the 44×44px tap-target minimum from the UI design rules.
+- **m-10:** Extract `formatCurrency`/`formatDate` from `TransactionList` into `src/utils/` before Sprint 4 duplicates them.
+- **N-1:** Modal keyboard support (Escape-to-close, focus trap) per WCAG 2.2 AA.
+- **N-2:** `client.ts` refresh edge case returns `""` token producing an empty `Authorization` header.
+- **N-3:** Doc drift — AGENTS.md still lists axios (frontend uses native fetch); connection string naming (`DefaultConnection` vs docs' `FinanceDb`).
+- **N-5:** CORS origin hardcoded to `http://localhost:3000` — should be configuration-driven.
 
 ---
 
@@ -3511,26 +3541,26 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
 
 - [x] `dotnet build` passes with 0 errors and 0 warnings
 - [x] `npm run build` passes with 0 TypeScript errors
-- [ ] `finances.categories` and `finances.transactions` tables exist in the database
-- [ ] `GET /api/categories` returns all categories for the authenticated user
-- [ ] `POST /api/categories` creates a category; returns 409 if the name already exists
-- [ ] `PUT /api/categories/{id}` updates a category; returns 404 if not owned by the user
-- [ ] `DELETE /api/categories/{id}` soft-deletes a category; it disappears from lists and its name can be reused
-- [ ] `GET /api/transactions?page=1&pageSize=20` returns a paginated list of transactions
-- [ ] `GET /api/transactions?type=Expense&categoryId={guid}` returns filtered transactions
-- [ ] `POST /api/transactions` creates a transaction; returns 400 if the category does not belong to the user
-- [ ] `PUT /api/transactions/{id}` updates a transaction; returns 404 if not owned by the user
-- [ ] `DELETE /api/transactions/{id}` deletes a transaction; returns 404 if not owned by the user
+- [x] `finances.categories` and `finances.transactions` tables exist in the database
+- [x] `GET /api/categories` returns all categories for the authenticated user
+- [x] `POST /api/categories` creates a category; returns 409 if the name already exists
+- [x] `PUT /api/categories/{id}` updates a category; returns 404 if not owned by the user
+- [x] `DELETE /api/categories/{id}` soft-deletes a category; it disappears from lists and its name can be reused
+- [x] `GET /api/transactions?page=1&pageSize=20` returns a paginated list of transactions
+- [x] `GET /api/transactions?type=Expense&categoryId={guid}` returns filtered transactions
+- [x] `POST /api/transactions` creates a transaction; returns 400 if the category does not belong to the user
+- [x] `PUT /api/transactions/{id}` updates a transaction; returns 404 if not owned by the user
+- [x] `DELETE /api/transactions/{id}` deletes a transaction; returns 404 if not owned by the user
 - [x] `ITransactionRepository.GetTotalExpensesByCategoryAsync` is implemented for Sprint 3 forward compatibility
-- [ ] Frontend `/categories` page is functional end-to-end (create, view, update, delete)
-- [ ] Frontend `/transactions` page is functional end-to-end (create, view, update, delete, pagination)
+- [x] Frontend `/categories` page is functional end-to-end (create, view, update, delete)
+- [x] Frontend `/transactions` page is functional end-to-end (create, view, update, delete, pagination)
 - [x] All endpoints return `ApiResponse<T>` envelope with `IsOk`, `Data`, `StatusCode`, `CodeText`
 - [x] All services return `Result<T>` — no raw exceptions for expected business failures
 - [x] No stale `// TODO Sprint 2:` comments in `Program.cs`
 - [x] `AuthEnpoints.cs` filename typo corrected to `AuthEndpoints.cs`
 
-> **Verification status (01/09/2026):** Checked items are verified via build and source inspection. Unchecked items require a running API + database and remain pending end-to-end runtime verification. Per the sprint rules, the `designer-enforcer` agent must also review this sprint before it is marked Done.
+> **Verification status (04/09/2026):** All criteria verified end-to-end against the running API (localhost:5194) and PostgreSQL (`finance-tracker-psql` container): a 31-check backend HTTP suite (auth, CRUD, 409/404/400 paths, filters, pagination, cross-user isolation, soft-delete name reuse) plus a full browser walkthrough of `/categories` and `/transactions` (login, CRUD, inline validation, pagination, skeletons, modal states — zero console errors, zero failed requests). The designer-enforcer review ran on 04/09/2026; its M-1 (mutation error surfacing), UI defects (timezone-stable dates, per-route titles) and minor findings (dead code, unused packages, `shrink-0`) were fixed in the closure commit. **C-1 (JWT tokens in localStorage — CRITICAL security) is deferred by owner decision to a dedicated auth-hardening task** and is tracked in SPRINTS-OVERVIEW.md Known Gaps.
 
 ---
 
-*Last updated: 01/09/2026*
+*Last updated: 04/09/2026*

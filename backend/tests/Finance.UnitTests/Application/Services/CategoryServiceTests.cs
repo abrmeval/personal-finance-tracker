@@ -12,12 +12,12 @@ public class CategoryServiceTests
 {
     private readonly ICategoryRepository _repository = Substitute.For<ICategoryRepository>();
     private readonly ILogger<CategoryService> _logger = Substitute.For<ILogger<CategoryService>>();
-    private readonly CategoryService _sut;
+    private readonly CategoryService _categoryService;
     private static readonly Guid UserId = Guid.NewGuid();
 
     public CategoryServiceTests()
     {
-        _sut = new CategoryService(_repository, _logger);
+        _categoryService = new CategoryService(_repository, _logger);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class CategoryServiceTests
         };
         _repository.GetAllByUserAsync(UserId, Arg.Any<CancellationToken>()).Returns(categories);
 
-        var result = await _sut.GetAllAsync(UserId);
+        var result = await _categoryService.GetAllAsync(UserId);
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(result.Value);
@@ -44,7 +44,7 @@ public class CategoryServiceTests
     {
         _repository.GetAllByUserAsync(UserId, Arg.Any<CancellationToken>()).Returns([]);
 
-        var result = await _sut.GetAllAsync(UserId);
+        var result = await _categoryService.GetAllAsync(UserId);
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value);
@@ -56,7 +56,7 @@ public class CategoryServiceTests
         var category = Category.Create(UserId, "Food", "🍔", "#FF0000");
         _repository.GetByUserAndIdAsync(UserId, category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
-        var result = await _sut.GetByIdAsync(UserId, category.Id);
+        var result = await _categoryService.GetByIdAsync(UserId, category.Id);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(category.Id, result.Value!.Id);
@@ -69,7 +69,7 @@ public class CategoryServiceTests
         var id = Guid.NewGuid();
         _repository.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
-        var result = await _sut.GetByIdAsync(UserId, id);
+        var result = await _categoryService.GetByIdAsync(UserId, id);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.CategoryNotFound, result.Error!.Code);
@@ -81,7 +81,7 @@ public class CategoryServiceTests
         var request = new CreateCategoryRequest("Food", "🍔", "#FF0000");
         _repository.ExistsByUserAndNameAsync(UserId, request.Name, Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await _sut.CreateAsync(UserId, request);
+        var result = await _categoryService.CreateAsync(UserId, request);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Food", result.Value!.Name);
@@ -95,7 +95,7 @@ public class CategoryServiceTests
         var request = new CreateCategoryRequest("Food", null, null);
         _repository.ExistsByUserAndNameAsync(UserId, request.Name, Arg.Any<CancellationToken>()).Returns(true);
 
-        var result = await _sut.CreateAsync(UserId, request);
+        var result = await _categoryService.CreateAsync(UserId, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.DuplicateCategoryName, result.Error!.Code);
@@ -110,7 +110,7 @@ public class CategoryServiceTests
         _repository.GetByUserAndIdAsync(UserId, category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _repository.ExistsByUserAndNameAsync(UserId, request.Name, Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await _sut.UpdateAsync(UserId, category.Id, request);
+        var result = await _categoryService.UpdateAsync(UserId, category.Id, request);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("New Name", result.Value!.Name);
@@ -125,7 +125,7 @@ public class CategoryServiceTests
         var request = new UpdateCategoryRequest("Name", null, null);
         _repository.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
-        var result = await _sut.UpdateAsync(UserId, id, request);
+        var result = await _categoryService.UpdateAsync(UserId, id, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.CategoryNotFound, result.Error!.Code);
@@ -139,7 +139,7 @@ public class CategoryServiceTests
         _repository.GetByUserAndIdAsync(UserId, category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _repository.ExistsByUserAndNameAsync(UserId, request.Name, Arg.Any<CancellationToken>()).Returns(true);
 
-        var result = await _sut.UpdateAsync(UserId, category.Id, request);
+        var result = await _categoryService.UpdateAsync(UserId, category.Id, request);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.DuplicateCategoryName, result.Error!.Code);
@@ -153,7 +153,7 @@ public class CategoryServiceTests
         _repository.GetByUserAndIdAsync(UserId, category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _repository.ExistsByUserAndNameAsync(UserId, request.Name, Arg.Any<CancellationToken>()).Returns(true);
 
-        var result = await _sut.UpdateAsync(UserId, category.Id, request);
+        var result = await _categoryService.UpdateAsync(UserId, category.Id, request);
 
         Assert.True(result.IsSuccess);
     }
@@ -164,7 +164,7 @@ public class CategoryServiceTests
         var category = Category.Create(UserId, "Food", null, null);
         _repository.GetByUserAndIdAsync(UserId, category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
-        var result = await _sut.DeleteAsync(UserId, category.Id);
+        var result = await _categoryService.DeleteAsync(UserId, category.Id);
 
         Assert.True(result.IsSuccess);
         Assert.True(result.Value);
@@ -178,7 +178,7 @@ public class CategoryServiceTests
         var id = Guid.NewGuid();
         _repository.GetByUserAndIdAsync(UserId, id, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
-        var result = await _sut.DeleteAsync(UserId, id);
+        var result = await _categoryService.DeleteAsync(UserId, id);
 
         Assert.True(result.IsFailure);
         Assert.Equal(ApiErrorCode.CategoryNotFound, result.Error!.Code);
