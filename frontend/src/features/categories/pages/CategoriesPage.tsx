@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import {
   useCategories,
@@ -11,9 +11,13 @@ import { CategoryList } from "@/features/categories/components/CategoryList";
 import type { Category } from "@/types/finance";
 import type { CategoryFormData } from "@/features/categories/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
+import { getErrorMessage } from "@/utils/errors";
 
 export function CategoriesPage() {
-  setDocumentTitle("Categories");
+  useEffect(() => {
+    setDocumentTitle("Categories");
+  }, []);
+
   const { data: response, isLoading, error } = useCategories();
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
@@ -22,6 +26,7 @@ export function CategoriesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const categories = response?.data ?? [];
 
@@ -38,32 +43,46 @@ export function CategoriesPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingCategory(null);
+    setMutationError(null);
+  }
+
+  function handleCloseDelete() {
+    setDeleteTarget(null);
+    setMutationError(null);
   }
 
   async function handleSubmit(data: CategoryFormData) {
-    if (editingCategory) {
-      await updateMutation.mutateAsync({
-        id: editingCategory.id,
-        data: {
+    try {
+      if (editingCategory) {
+        await updateMutation.mutateAsync({
+          id: editingCategory.id,
+          data: {
+            name: data.name,
+            icon: data.icon ?? null,
+            color: data.color ?? null,
+          },
+        });
+      } else {
+        await createMutation.mutateAsync({
           name: data.name,
           icon: data.icon ?? null,
           color: data.color ?? null,
-        },
-      });
-    } else {
-      await createMutation.mutateAsync({
-        name: data.name,
-        icon: data.icon ?? null,
-        color: data.color ?? null,
-      });
+        });
+      }
+      handleCloseModal();
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
     }
-    handleCloseModal();
   }
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      handleCloseDelete();
+    } catch (error) {
+      setMutationError(getErrorMessage(error));
+    }
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -104,6 +123,11 @@ export function CategoriesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {mutationError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {mutationError}
+              </div>
+            )}
             <CategoryForm
               defaultValues={
                 editingCategory
@@ -134,9 +158,14 @@ export function CategoriesPage() {
               Are you sure you want to delete "{deleteTarget.name}"?
               Transactions referencing this category will become uncategorized.
             </p>
+            {mutationError && (
+              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {mutationError}
+              </div>
+            )}
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={handleCloseDelete}
                 className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel

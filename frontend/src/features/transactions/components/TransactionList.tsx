@@ -17,11 +17,14 @@ function formatCurrency(amount: number): string {
 }
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(`${dateString.slice(0, 10)}T00:00:00`).toLocaleDateString(
+    "es-MX",
+    {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    },
+  );
 }
 
 export function TransactionList({
@@ -67,9 +70,9 @@ export function TransactionList({
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {transaction.type === "Income" ? (
-              <ArrowUpCircle className="h-5 w-5 flex-shrink-0 text-green-600" />
+              <ArrowUpCircle className="h-5 w-5 shrink-0 text-green-600" />
             ) : (
-              <ArrowDownCircle className="h-5 w-5 flex-shrink-0 text-red-600" />
+              <ArrowDownCircle className="h-5 w-5 shrink-0 text-red-600" />
             )}
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
@@ -81,7 +84,7 @@ export function TransactionList({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <span
               className={`text-sm font-semibold ${
                 transaction.type === "Income"

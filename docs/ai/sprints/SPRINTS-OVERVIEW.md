@@ -103,7 +103,7 @@ Users can register and log in. JWT-protected routes work end-to-end. Frontend ha
 
 **Duration:** 2 weeks
 **Doc:** [sprint-2.md](./sprint-2.md)
-**Status:** In Progress (Tasks 1–28 complete — pending commit, end-to-end runtime verification, and designer-enforcer review)
+**Status:** Done
 
 ### Goals
 Full CRUD for transactions and categories, connected front-to-back with pagination, filtering, and cache-invalidated queries.
@@ -241,7 +241,8 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 | No `@/` path alias in `vite.config.ts` | Resolved in Sprint 0 Task 8 |
 | TickerQ requires PostgreSQL backing store — needs migration | Handled in Sprint 4 |
 | Neon PostgreSQL provisioning depends on Sprint 6 | Sprints 1–5 use local PostgreSQL via Docker/TestContainers |
+| JWT tokens + full user object persisted in `localStorage` (audit C-1, CRITICAL — violates AGENTS.md security rules) | Deferred by owner decision to a dedicated auth-hardening task before production; refresh tokens must move to HttpOnly cookies and the access token to memory |
 
 ---
 
-*Last updated: 01/09/2026*
+*Last updated: 04/09/2026*
