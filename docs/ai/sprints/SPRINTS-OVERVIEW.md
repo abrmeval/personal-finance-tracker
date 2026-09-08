@@ -139,12 +139,13 @@ Full CRUD for transactions and categories, connected front-to-back with paginati
 Users can create budgets per category with period-based (daily/weekly/monthly/yearly) spending calculations and visual progress tracking.
 
 ### What's Included
-- **Backend:** `Budget` domain entity, `BudgetPeriod` enum, `IBudgetRepository`, `BudgetService`
+- **Backend:** `Budget` domain entity (soft-delete), `BudgetPeriod` enum, `IBudgetRepository`, `BudgetService` (`Result<T>` pattern)
 - **Backend:** Budget endpoints with spending-vs-budget calculation logic; EF Core configuration + migration
-- **Backend:** FluentValidation validators for budget requests
+- **Backend:** FluentValidation validators for budget requests; `ApiErrorCode` additions
 - **Frontend:** `budgetsApi` service, `useBudgets`, `useCreateBudget`, `useUpdateBudget`, `useDeleteBudget` hooks
-- **Frontend:** `BudgetForm`, `BudgetList`, `BudgetProgressChart`, `BudgetsPage`
+- **Frontend:** `BudgetForm`, `BudgetCard`, `BudgetList`, `BudgetsPage`
 - **Frontend:** Type definitions: `Budget`, `BudgetWithSpending`, `CreateBudgetRequest`
+- **Frontend:** Shared `formatCurrency`/`formatDate` formatters extracted to `src/utils/formatters.ts`; transaction mutations invalidate budget queries (spending depends on transactions)
 
 ### Out of Scope
 - Budget alert background jobs (Sprint 4)
@@ -170,7 +171,7 @@ A complete dashboard with financial overview cards and charts. Monthly summaries
 - **Backend:** TickerQ background jobs — `MonthlyReportJob` (1st of month), `BudgetAlertJob` (every 6 hours)
 - **Frontend:** `reportsApi` service, `useDashboardSummary`, `useIncomeVsExpenses`, `useCategoryBreakdown` hooks
 - **Frontend:** `OverviewCards`, `SpendingPieChart`, `IncomeExpenseChart`, `Dashboard` page fully assembled
-- **Frontend:** `formatCurrency`, `formatDate`, `getCurrentMonthRange` utility functions
+- **Frontend:** `getCurrentMonthRange` utility function (`formatCurrency`/`formatDate` already extracted in Sprint 3)
 
 ### Out of Scope
 - Email/push notifications for budget alerts
@@ -242,7 +243,8 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 | TickerQ requires PostgreSQL backing store — needs migration | Handled in Sprint 4 |
 | Neon PostgreSQL provisioning depends on Sprint 6 | Sprints 1–5 use local PostgreSQL via Docker/TestContainers |
 | JWT tokens + full user object persisted in `localStorage` (audit C-1, CRITICAL — violates AGENTS.md security rules) | Deferred by owner decision to a dedicated auth-hardening task before production; refresh tokens must move to HttpOnly cookies and the access token to memory |
+| `TreatWarningsAsErrors` commented out in `Directory.Build.props`; 6 pre-existing warnings in test projects | Fix warnings and re-enable, or update AGENTS.md to match reality — resolve alongside Sprint 3+ work |
 
 ---
 
-*Last updated: 04/09/2026*
+*Last updated: 08/09/2026*
