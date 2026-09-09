@@ -1,5 +1,6 @@
 import { Pencil, Trash2, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import type { Transaction } from "@/types/finance";
+import { formatCurrency, formatDate } from "@/utils/formatters";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -7,24 +8,6 @@ interface TransactionListProps {
   error: Error | null;
   onEdit: (transaction: Transaction) => void;
   onDelete: (transaction: Transaction) => void;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-  }).format(amount);
-}
-
-function formatDate(dateString: string): string {
-  return new Date(`${dateString.slice(0, 10)}T00:00:00`).toLocaleDateString(
-    "es-MX",
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    },
-  );
 }
 
 export function TransactionList({

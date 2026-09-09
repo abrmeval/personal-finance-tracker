@@ -36,10 +36,12 @@ public static class DependencyInjection
         // Repositories
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IBudgetRepository, BudgetRepository>();
 
         // Services
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<ITransactionService, TransactionService>();
+        services.AddScoped<IBudgetService, BudgetService>();
 
         // Validators
         services.AddValidatorsFromAssemblyContaining<CreateCategoryValidator>();
@@ -51,6 +53,7 @@ public static class DependencyInjection
     {
         app.MapCategoryEndpoints();
         app.MapTransactionEndpoints();
+        app.MapBudgetEndpoints();
         return app;
     }
 }

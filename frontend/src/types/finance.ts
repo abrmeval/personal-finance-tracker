@@ -60,3 +60,36 @@ export interface TransactionFilters {
   categoryId?: string;
   type?: TransactionType;
 }
+
+export type BudgetPeriod = 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
+
+export interface Budget {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  name: string;
+  limitAmount: number;
+  period: BudgetPeriod;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface BudgetWithSpending extends Budget {
+  spentAmount: number;
+  remainingAmount: number;
+  percentageUsed: number;
+  isOverBudget: boolean;
+}
+
+export interface CreateBudgetRequest {
+  categoryId: string;
+  name: string;
+  limitAmount: number;
+  period: BudgetPeriod;
+}
+
+export interface UpdateBudgetRequest {
+  name: string;
+  limitAmount: number;
+  period: BudgetPeriod;
+}

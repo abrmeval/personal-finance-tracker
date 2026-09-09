@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [Project Status](#project-status)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
@@ -24,23 +25,38 @@
 
 ---
 
+## Project Status
+
+The application is built sprint by sprint (plans in [`docs/ai/sprints/`](docs/ai/sprints/)):
+
+| Area | Status |
+|------|--------|
+| Foundation — shared kernel, middleware pipeline, CI, tooling | Done |
+| Users module — JWT auth (register, login, refresh, revoke) | Done |
+| Finance module — transactions & categories (CRUD, filters, pagination) | Done |
+| Finance module — budgets (period budgets, spending progress) | Implemented |
+| Reporting module — dashboard, charts, background jobs (TickerQ) | Planned (Sprint 4) |
+| Test suite — integration tests, frontend tests | Planned (Sprint 5) |
+| DevOps — CD pipelines, Azure deployment, observability wiring | Planned (Sprint 6) |
+
+---
+
 ## Features
 
-### Core Functionality
-- **Transaction Management** — Track income and expenses with categories
-- **Budget Planning** — Set budgets per category and monitor spending
-- **Financial Reports** — Visualize spending patterns and trends
-- **Category Management** — Organize transactions with custom categories
-- **User Authentication** — Secure JWT-based authentication with token refresh
-- **Search & Filters** — Filter transactions by date, category, type, and amount
+### Implemented
 
-### Technical Highlights
-- **Modular Monolith** — Clean Architecture with isolated modules (Finance, Users, Reporting)
-- **Minimal APIs** — High-performance ASP.NET 10 endpoints, no MVC controllers
+- **User Authentication** — JWT-based login and registration with access/refresh token flow
+- **Transaction Management** — Track income and expenses with categories, filtering, and pagination
+- **Category Management** — Organize transactions with custom categories
+- **Budget Planning** — Set per-category budgets with period-based (daily/weekly/monthly/yearly) spending tracking
+- **Protected Routes** — Client-side route guarding with automatic token refresh on 401 responses
 - **Responsive Design** — Mobile-first UI with Tailwind CSS v4
-- **Server State** — TanStack Query with query key factory pattern and optimistic updates
-- **Observability** — OpenTelemetry with OTLP export (traces, metrics, logs)
-- **Strict TypeScript** — `strict`, `verbatimModuleSyntax`, `noUnusedLocals` enforced
+
+### Roadmap
+
+- **Dashboard & Reports** — Overview cards, spending charts, monthly summaries (Sprint 4)
+- **Background Jobs** — Budget alerts and monthly report generation via TickerQ (Sprint 4)
+- **Production Deployment** — Azure hosting, Neon PostgreSQL, OpenTelemetry OTLP export (Sprint 6)
 
 ---
 
@@ -53,7 +69,7 @@ This project follows a **Modular Monolith** architecture — module isolation an
 │                 Personal Finance Tracker API                  │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │   │   Finance    │  │    Users     │  │    Reporting     │   │
-│   │   Module     │  │   Module     │  │     Module       │   │
+│   │   Module ✓   │  │   Module ✓   │  │    (planned)     │   │
 │   └──────┬───────┘  └──────┬───────┘  └───────┬──────────┘   │
 │          │                 │                   │              │
 │   ┌──────▼─────────────────▼───────────────────▼──────────┐   │
@@ -64,12 +80,15 @@ This project follows a **Modular Monolith** architecture — module isolation an
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                    Neon PostgreSQL                            │
+│                       PostgreSQL                              │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│   │  finances.*  │  │   users.*    │  │   reporting.*    │   │
+│   │  finances.*  │  │   users.*    │  │  reporting.*     │   │
+│   │      ✓       │  │      ✓       │  │    (planned)     │   │
 │   └──────────────┘  └──────────────┘  └──────────────────┘   │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+Each module owns one PostgreSQL schema and one `DbContext` (local development uses Docker; Neon PostgreSQL is the production target).
 
 ### Clean Architecture Layers
 
@@ -82,48 +101,55 @@ Each module follows a strict dependency rule — dependencies point inward only:
 | **Infrastructure** | EF Core repos, external services | Domain, Application |
 | **Api** | Minimal API endpoints, DI registration | Application |
 
+Modules register themselves via `AddXxxModule(...)` / `MapXxxEndpoints(...)` in their `DependencyInjection.cs` and are wired in `Program.cs`.
+
 ---
 
 ## Tech Stack
 
 ### Backend
+
 | Package | Version | Purpose |
 |---------|---------|---------|
 | ASP.NET 10 Minimal APIs | 10.0 | HTTP host, no MVC controllers |
-| Entity Framework Core | 10.0 | ORM |
-| Npgsql EF Core Provider | 10.0 | PostgreSQL driver |
+| Entity Framework Core + Npgsql | 10.0 | ORM with module-isolated PostgreSQL schemas |
 | FluentValidation | 12.1 | Request validation via `ValidationFilter<T>` |
 | Microsoft.AspNetCore.Authentication.JwtBearer | 10.0 | JWT authentication |
-| Swashbuckle.AspNetCore | 10.1 | OpenAPI / Swagger UI |
-| OpenTelemetry | 1.15 | Traces, metrics, logs (OTLP export) |
-| AspNetCore.HealthChecks.NpgSql | 9.0 | PostgreSQL health check endpoint |
-| xUnit + TestContainers | — | Unit and integration testing |
-| TickerQ | — | Cron-based background jobs |
+| Microsoft.AspNetCore.OpenApi + Scalar.AspNetCore | 10.0 / 2.14 | OpenAPI document + API reference UI (dev only) |
+| AspNetCore.HealthChecks.NpgSql | 9.0 | Referenced; DB readiness check not yet wired |
+| xUnit | — | Unit tests (`Finance.UnitTests`, `Users.UnitTests`) |
+
+**Planned:** OpenTelemetry (packages installed, OTLP wiring in Sprint 6), TickerQ background jobs (Sprint 4), TestContainers integration tests (Sprint 5).
 
 ### Frontend
+
 | Package | Version | Purpose |
 |---------|---------|---------|
 | React | 19 | UI framework |
 | TypeScript | 5.9 | Type safety (`strict` mode) |
 | Vite | 7 | Build tool and dev server |
-| Tailwind CSS | v4 (Vite plugin) | Utility-first styling |
-| TanStack Query | latest | Server state management |
-| React Hook Form + Zod | latest | Form handling and validation |
-| React Router DOM | v7 | Client-side routing |
-| Native `fetch` API | — | HTTP client with 401/refresh interceptor |
-| Recharts / Chart.js | latest | Data visualization |
-| Lucide React | latest | Icons |
-| date-fns | latest | Date utilities |
-| clsx + tailwind-merge | latest | Conditional class composition |
+| Tailwind CSS | 4 (Vite plugin) | Utility-first styling |
+| TanStack Query | 5 | Server state management |
+| React Hook Form + Zod | 7 / 4 | Form handling and validation |
+| React Router DOM | 7 | Client-side routing |
+| Native `fetch` API | — | HTTP client (`src/api/client.ts`) with 401/refresh/retry interceptor |
+| Recharts | 3 | Data visualization |
+| Lucide React | — | Icons |
+| date-fns | 4 | Date utilities |
+| clsx + tailwind-merge | — | Conditional class composition |
+
+**Installed but not yet wired:** Vitest, Testing Library, MSW (test scripts arrive with Sprint 5).
 
 ### Infrastructure
+
 | Component | Technology |
-|-----------|-----------|
-| Database | Neon PostgreSQL (serverless) |
-| CI/CD | GitHub Actions |
-| Observability | OpenTelemetry (OTLP) |
-| Secrets (local) | .NET User Secrets |
-| Secrets (production) | Environment variables |
+|-----------|------------|
+| Database (local) | PostgreSQL 18 via Docker Compose |
+| Database (production, planned) | Neon PostgreSQL (serverless) |
+| CI | GitHub Actions (build, lint, format check, PR standards) |
+| Observability (planned) | OpenTelemetry (OTLP export) |
+| Secrets (local) | `appsettings.Local.json` (gitignored, auto-loaded) |
+| Secrets (production, planned) | Environment variables |
 
 ---
 
@@ -133,56 +159,80 @@ Each module follows a strict dependency rule — dependencies point inward only:
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 20+](https://nodejs.org/)
-- [Docker](https://www.docker.com/) (for local PostgreSQL)
+- [Docker Desktop](https://www.docker.com/) (local PostgreSQL)
+- EF Core CLI: `dotnet tool install --global dotnet-ef`
+- Optional (Windows): [Task](https://taskfile.dev) + Windows Terminal for the `task` shortcuts below
 
-### Local Development Setup
+### 1. Start a local PostgreSQL instance
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/abrmeval/personal-finance-tracker.git
-   cd personal-finance-tracker
-   ```
+The database runs via Docker Compose with credentials from an env file:
 
-2. **Start a local PostgreSQL instance**
-   ```bash
-   docker run -d --name finance-db \
-     -e POSTGRES_PASSWORD=postgres \
-     -p 5432:5432 \
-     postgres:16
-   ```
+```bash
+cd infrastructure
+copy .env.example .env        # macOS/Linux: cp .env.example .env
+# Edit .env — set POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+docker compose up -d          # postgres:18 on localhost:5432 (container: finance-tracker-psql)
+```
 
-3. **Configure backend secrets** (never committed to git)
-   ```bash
-   dotnet user-secrets set "ConnectionStrings:DefaultConnection" \
-     "Host=localhost;Port=5432;Database=finance_tracker_dev;Username=postgres;Password=postgres" \
-     --project backend/src/Personal.FinanceTracker.Api
+### 2. Configure backend secrets
 
-   dotnet user-secrets set "Jwt:SecretKey" \
-     "your-local-secret-key-minimum-32-characters" \
-     --project backend/src/Personal.FinanceTracker.Api
-   ```
+Local secrets live in `appsettings.Local.json` (gitignored, loaded explicitly by `Program.cs`). Create it next to `appsettings.json` in `backend/src/Personal.FinanceTracker.Api/`:
 
-4. **Build and run the API**
-   ```bash
-   dotnet build backend/
-   dotnet run --project backend/src/Personal.FinanceTracker.Api
-   # API: http://localhost:5194
-   # Swagger UI: http://localhost:5194/swagger
-   # Health: http://localhost:5194/health/live
-   ```
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=<POSTGRES_DB>;Username=<POSTGRES_USER>;Password=<POSTGRES_PASSWORD>"
+  },
+  "Jwt": {
+    "SecretKey": "<your-local-secret-key-minimum-32-characters>",
+    "Issuer": "<jwt_issuer>",
+    "Audience": "<jwt_audience>",
+    "ExpiryMinutes": 60,
+    "RefreshTokenExpiryDays": 7
+  }
+}
+```
 
-5. **Install frontend dependencies**
-   ```bash
-   cd frontend
-   npm install
-   ```
+Match the connection string values to `infrastructure/.env`. Never commit this file.
 
-6. **Start the frontend**
-   ```bash
-   npm run dev
-   # Frontend: http://localhost:3000
-   # Proxies /api/* → http://localhost:5194
-   ```
+### 3. Apply database migrations
+
+There are two `DbContext`s (one per module) — both must be updated. Run from `backend/`:
+
+```bash
+cd backend
+
+dotnet ef database update --project src/Modules/Users/Personal.FinanceTracker.Users.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context UsersDbContext
+
+dotnet ef database update --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext
+```
+
+### 4. Build and run the API
+
+```bash
+dotnet run --project backend/src/Personal.FinanceTracker.Api
+```
+
+| Endpoint | URL |
+|----------|-----|
+| API | http://localhost:5194 |
+| Scalar API reference (dev only) | http://localhost:5194/scalar |
+| Health checks | http://localhost:5194/health/live, http://localhost:5194/health/ready |
+
+### 5. Start the frontend
+
+```bash
+cd frontend
+npm install
+copy .env.example .env        # Required — dev/build scripts load it via dotenv-cli
+npm run dev
+```
+
+| Endpoint | URL |
+|----------|-----|
+| Frontend | http://localhost:3000 |
+
+The Vite dev server proxies all `/api/*` requests to `http://localhost:5194` — no CORS setup needed locally.
 
 ---
 
@@ -192,49 +242,51 @@ Each module follows a strict dependency rule — dependencies point inward only:
 personal-finance-tracker/
 │
 ├── backend/
-│   ├── Personal.FinanceTracker.slnx
-│   ├── Directory.Build.props              # net10.0, TreatWarningsAsErrors, analyzers
+│   ├── Personal.FinanceTracker.slnx           # Solution (XML format)
+│   ├── Directory.Build.props                  # Nullable, ImplicitUsings, Roslyn analyzers
 │   │
-│   └── src/
-│       ├── Personal.FinanceTracker.Api/   # ASP.NET 10 host — Program.cs, middleware pipeline
-│       ├── Personal.FinanceTracker.Shared/ # Shared kernel
-│       │   ├── Abstractions/              # Entity base class
-│       │   ├── Exceptions/               # NotFoundException
-│       │   ├── Extensions/               # ClaimsPrincipalExtensions
-│       │   ├── Filters/                  # ValidationFilter<T>
-│       │   ├── Middleware/               # ExceptionHandlingMiddleware
-│       │   └── Models/                   # ApiResponse<T>, ApiError, Result<T>
-│       └── Modules/
-│           ├── Users/                    # Auth — implemented (Sprint 1)
-│           │   ├── Domain/               # User, RefreshToken entities + interfaces
-│           │   ├── Application/          # DTOs, service interfaces, validators
-│           │   ├── Infrastructure/       # EF Core, repositories, services, JWT config
-│           │   └── Api/Endpoints/        # AuthEndpoints (register, login, refresh, revoke)
-│           ├── Finance/                  # Transactions, Categories, Budgets (Sprint 2–3)
-│           └── Reporting/               # Dashboard, analytics (Sprint 4)
+│   ├── src/
+│   │   ├── Personal.FinanceTracker.Api/       # Host — Program.cs, middleware, appsettings.Local.json (gitignored)
+│   │   ├── Personal.FinanceTracker.Shared/    # Shared kernel
+│   │   │   ├── Abstractions/                  # Entity base class
+│   │   │   ├── Exceptions/                    # NotFoundException
+│   │   │   ├── Extensions/                    # ClaimsPrincipalExtensions
+│   │   │   ├── Filters/                       # ValidationFilter<T>
+│   │   │   ├── Middleware/                    # ExceptionHandlingMiddleware (RFC 7807)
+│   │   │   └── Models/                        # ApiResponse<T>, ApiError, Result<T>
+│   │   └── Modules/
+│   │       ├── Users/                         # Auth — register, login, refresh, revoke
+│   │       │   ├── Domain/                    # User, RefreshToken entities + interfaces
+│   │       │   ├── Application/               # DTOs, service interfaces, validators
+│   │       │   ├── Infrastructure/            # EF Core (users.* schema), repos, JWT services
+│   │       │   ├── Api/Endpoints/             # AuthEndpoints
+│   │       │   └── DependencyInjection.cs     # AddUsersModule / MapUsersEndpoints
+│   │       └── Finance/                       # Transactions, Categories, Budgets (finances.* schema)
+│   │           └── (same layer layout as Users)
+│   │
+│   └── tests/
+│       ├── Finance.UnitTests/                 # xUnit — domain/application logic
+│       └── Users.UnitTests/                   # xUnit — domain/application logic
 │
 ├── frontend/
+│   ├── .env.example                           # VITE_API_URL, VITE_ENVIRONMENT
 │   └── src/
-│       ├── api/                          # Fetch-based client + per-resource API modules
-│       ├── components/                   # Shared UI (auth/, layout/)
-│       ├── features/                     # Feature pages (auth/ implemented; others Sprint 2+)
-│       ├── hooks/                        # Custom React hooks
-│       ├── routes/                       # createBrowserRouter route definitions
-│       ├── types/                        # TypeScript types mirroring backend DTOs
-│       └── utils/                        # clientLogger, documentTitle
+│       ├── api/                               # Fetch-based client + auth/budgets/categories/transactions modules
+│       ├── components/                        # Shared UI (layout/, ui/)
+│       ├── features/                          # auth/, transactions/, categories/, budgets/
+│       ├── hooks/                             # Custom React hooks
+│       ├── pages/                             # NotFoundPage, PlaceholderPage
+│       ├── routes/                            # createBrowserRouter route definitions
+│       ├── types/                             # TypeScript types mirroring backend DTOs
+│       └── utils/                             # clientLogger, documentTitle
 │
-├── docs/
-│   ├── 01-Project-Structure.md
-│   ├── 02-Backend-Documentation.md
-│   ├── 03-Frontend-Documentation.md
-│   ├── 04-DevOps-Deployment.md
-│   ├── 05-Infrastructure.md
-│   ├── 06-Local-Development.md
-│   ├── DESIGN_PATTERNS.md               # Backend design patterns catalogue
-│   └── ai/
-│       ├── ui-design-rules.md
-│       └── sprints/                      # Sprint plans and execution docs
+├── infrastructure/
+│   ├── docker-compose.yml                     # Local PostgreSQL 18 (finance-tracker-psql)
+│   └── .env.example                           # POSTGRES_USER / PASSWORD / DB
 │
+├── docs/                                      # Architecture and sprint documentation
+├── Taskfile.yml                               # Windows Terminal task shortcuts (see Development)
+├── run.py                                     # Opens frontend + backend in terminal tabs
 └── README.md
 ```
 
@@ -245,62 +297,90 @@ personal-finance-tracker/
 ### Backend Commands
 
 ```bash
-# Build solution
-dotnet build backend/
+# Build the solution
+dotnet build backend/Personal.FinanceTracker.slnx
 
-# Run API
+# Run the API
 dotnet run --project backend/src/Personal.FinanceTracker.Api
 
 # Run all tests
-dotnet test backend/
+dotnet test backend/Personal.FinanceTracker.slnx
 
-# Run a specific test project
+# Run a single test project
 dotnet test backend/tests/Finance.UnitTests
 
+# Run a single test by name
+dotnet test backend/Personal.FinanceTracker.slnx --filter "FullyQualifiedName~MyMethodName"
+
 # Run tests with coverage
-dotnet test backend/ --collect:"XPlat Code Coverage"
+dotnet test backend/Personal.FinanceTracker.slnx --collect:"XPlat Code Coverage"
 
-# Format code
-dotnet format backend/
+# Format all C# code
+dotnet format backend/Personal.FinanceTracker.slnx
 
-# Add a migration (once Finance module exists)
-dotnet ef migrations add <MigrationName> \
-  --context <DbContext> \
-  --project backend/src/Modules/<ProjectName> \
-  --startup-project backend/src/Personal.FinanceTracker.Api
-
-# Apply migrations
-dotnet ef database update \
-  --context <DbContext> \
-  --startup-project backend/src/Personal.FinanceTracker.Api
+# Verify formatting without changing files (what CI checks, warn-only)
+dotnet format backend/Personal.FinanceTracker.slnx --verify-no-changes --severity warn
 ```
+
+### EF Core Migrations
+
+Run from `backend/`. Add a migration to a module, then apply it:
+
+```bash
+# Add a Finance migration
+dotnet ef migrations add <MigrationName> --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext --output-dir Infrastructure/Data/Migrations
+
+# Apply it
+dotnet ef database update --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext
+```
+
+For the Users module, use `src/Modules/Users/Personal.FinanceTracker.Users.csproj` and `--context UsersDbContext`.
 
 ### Frontend Commands
 
 ```bash
 cd frontend
 
-# Install dependencies
-npm install
-
-# Start dev server (http://localhost:3000)
-npm run dev
-
-# Type-check and build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Lint
-npm run lint
-
-# Run tests (Vitest)
-npm test
-
-# Run tests with coverage
-npm run test:coverage
+npm run dev           # Vite dev server (http://localhost:3000) — loads .env via dotenv-cli
+npm run build         # Type-check (tsc -b) then production build
+npm run build-lint    # ESLint + type-check + production build
+npm run lint          # ESLint only
+npm run preview       # Serve the production build
+npm run serve         # Build, then serve the production build
 ```
+
+Vitest, Testing Library, and MSW are installed, but test scripts are not wired up yet (planned — Testing sprint).
+
+### Task Runner (Windows)
+
+`Taskfile.yml` opens the apps in Windows Terminal tabs (requires [Task](https://taskfile.dev) and `wt`):
+
+```bash
+task local          # Frontend (production preview) + Backend, in terminal tabs
+task local-debug    # Frontend (Vite dev server) + Backend, in terminal tabs
+task backend        # Backend only
+task frontend       # Frontend production preview only
+task frontend-debug # Vite dev server only
+task backend-format # dotnet format the solution
+```
+
+Alternative: `python run.py` opens both apps in terminal tabs.
+
+### CI (GitHub Actions)
+
+- **Dev CI** (`dev.yml`, on push/PR to `main`): backend restore + Release build + format check (warn-only); frontend `npm ci` + lint + build. Runs on .NET 10 / Node 20.
+- **PR Standard Check** (`pr-standard.yml`, required for merging into `main`):
+  - Title: `PR: [Area] Title` — optional area in brackets (e.g. `[Finance]`, `[Users]`, `[CI]`, `[Docs]`), imperative mood, at most 150 characters
+  - Description must contain, in order:
+    ```markdown
+    # Summary:
+    - 2–3 sentences: what changed and why it is useful
+
+    # Key Changes:
+    - Bullet point 1
+    - Bullet point 2
+    ```
+- **opencode** (`opencode.yml`): comment `/oc` or `/opencode` on an issue or PR to trigger an automated code-reviewer agent run.
 
 ---
 
@@ -316,8 +396,10 @@ All documentation lives in `docs/`:
 | [04-DevOps-Deployment.md](docs/04-DevOps-Deployment.md) | GitHub Actions CI/CD, environment configuration |
 | [05-Infrastructure.md](docs/05-Infrastructure.md) | Neon PostgreSQL, environment variables, secrets |
 | [06-Local-Development.md](docs/06-Local-Development.md) | Local setup, running the stack, migrations |
+| [DEPENDENCIES.md](docs/DEPENDENCIES.md) | NuGet/npm dependency catalogue with purposes |
 | [DESIGN_PATTERNS.md](docs/DESIGN_PATTERNS.md) | Backend design patterns catalogue (Result, Repository, Options, etc.) |
 | [ai/ui-design-rules.md](docs/ai/ui-design-rules.md) | UI component conventions and Tailwind patterns |
+| [ai/sprints/SPRINTS-OVERVIEW.md](docs/ai/sprints/SPRINTS-OVERVIEW.md) | Sprint plans, sequencing, and status |
 | [AGENTS.md](AGENTS.md) | Coding standards, naming conventions, architecture rules |
 
 ---
