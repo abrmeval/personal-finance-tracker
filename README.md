@@ -3,6 +3,7 @@
 > A full-stack personal finance management application built with **ASP.NET 10** and **React 19**
 > Track expenses, manage budgets, and gain insights into your financial health.
 
+[![CI](https://github.com/abrmeval/personal-finance-tracker/actions/workflows/dev.yml/badge.svg)](https://github.com/abrmeval/personal-finance-tracker/actions/workflows/dev.yml)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://www.typescriptlang.org/)
@@ -272,7 +273,7 @@ personal-finance-tracker/
 │   ├── .env.example                           # VITE_API_URL, VITE_ENVIRONMENT
 │   └── src/
 │       ├── api/                               # Fetch-based client + auth/budgets/categories/transactions modules
-│       ├── components/                        # Shared UI (layout/, ui/)
+│       ├── components/                        # Shared UI (auth/ — AuthProvider, layout/ — Header/Sidebar/MainLayout)
 │       ├── features/                          # auth/, transactions/, categories/, budgets/
 │       ├── hooks/                             # Custom React hooks
 │       ├── pages/                             # NotFoundPage, PlaceholderPage
@@ -384,6 +385,15 @@ Alternative: `python run.py` opens both apps in terminal tabs.
 
 ---
 
+## Troubleshooting
+
+- **Frontend scripts fail with an env-file error:** `npm run dev` and `npm run build` load `.env` via dotenv-cli — copy `.env.example` to `.env` first.
+- **Migration applied to one module only:** there are two `DbContext`s (`UsersDbContext`, `FinanceDbContext`) — run `dotnet ef database update` for both (see [EF Core Migrations](#ef-core-migrations)).
+- **API reference returns 404:** the Scalar UI is served only in the Development environment at `http://localhost:5194/scalar`.
+- **Cannot connect to PostgreSQL:** ensure the container is running (`docker compose up -d` from `infrastructure/`) and that `appsettings.Local.json` connection values match `infrastructure/.env`.
+
+---
+
 ## Documentation
 
 All documentation lives in `docs/`:
@@ -413,3 +423,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 <div align="center">
   <p>Built with .NET 10 and React 19</p>
 </div>
+
+---
+
+*Last Updated: 09 Sep 2026*

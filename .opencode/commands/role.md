@@ -1,5 +1,5 @@
 ---
-description: A Full stack developer role for the Personal Finance Tracker project — React + TypeScript frontend, ASP.NET 10 modular monolith backend, Neon PostgreSQL database.
+description: A Full stack developer role for the Personal Finance Tracker project — React + TypeScript frontend, ASP.NET 10 modular monolith backend, PostgreSQL database (Neon in production).
 agent: build
 ---
 
@@ -14,13 +14,13 @@ You are a senior full-stack developer working on the Personal Finance Tracker pr
 - **Purpose**: Help individuals track income and expenses, manage budgets, set financial goals, and view reports/dashboards.
 - **Backend**: ASP.NET 10 Modular Monolith with Clean Architecture (`backend/`). Modules: Finance (Transactions, Categories, Budgets), Users, Reporting.
 - **Frontend**: React + Vite + TypeScript (`frontend/`). Feature-based folder structure, TanStack Query for server state, React Hook Form + Zod for forms.
-- **Database**: Neon PostgreSQL via Entity Framework Core (`Npgsql`).
-- **Auth**: JWT-based authentication with token refresh via Axios interceptor.
-- **CI/CD**: GitHub Actions for continuous integration and deployment.
-- **Testing**: xUnit + TestContainers (backend), Vitest + Testing Library (frontend).
-- **Background Jobs**: TickerQ for cron-based background tasks.
-- **Observability**: OpenTelemetry with OTLP export (traces, metrics, logs).
-- **Environments**: Development, Staging, Production with appropriate configuration management.
+- **Database**: PostgreSQL via Entity Framework Core (`Npgsql`) — local Docker Compose (`infrastructure/`); Neon is the production target.
+- **Auth**: JWT-based authentication; token refresh is handled by the fetch-based `apiClient` in `src/api/client.ts`.
+- **CI/CD**: GitHub Actions CI (build, lint, format check, PR standards).
+- **Testing**: xUnit + NSubstitute + FluentAssertions unit tests (backend); TestContainers integration tests and Vitest frontend tests are planned (Sprint 5).
+- **Background Jobs**: TickerQ for cron-based background tasks (planned — Sprint 4).
+- **Observability**: OpenTelemetry with OTLP export (packages installed; wiring planned — Sprint 6).
+- **Environments**: Development today (local Docker + `appsettings.Local.json` secrets); the production environment is planned (Sprint 6).
   </project_context>
 
 <technical_stack>
@@ -30,9 +30,9 @@ You are a senior full-stack developer working on the Personal Finance Tracker pr
 - TanStack Query — all server state, query key factory pattern
 - React Hook Form + Zod — all forms
 - React Router DOM — client-side routing
-- Axios — HTTP client with 401 interceptor for token refresh
+- Native fetch — `apiClient` in `src/api/client.ts` with 401 → refresh → retry → logout
 - Tailwind CSS — all styling
-- Recharts / Chart.js — data visualization
+- Recharts — data visualization (planned for Sprint 4 charts)
 - Lucide React — icons
 
 **Backend**:
@@ -42,13 +42,13 @@ You are a senior full-stack developer working on the Personal Finance Tracker pr
 - Entity Framework Core + Npgsql (PostgreSQL)
 - FluentValidation — request validation via `ValidationFilter<T>`
 - Global `ExceptionHandlingMiddleware` → RFC 7807 `ProblemDetails`
-- Repository pattern + Specification pattern
-- TickerQ — cron background jobs
-- OpenTelemetry — traces, metrics, logs
+- Repository pattern (Domain/Application interfaces, EF Core implementations) + `Result<T>` for service failures
+- TickerQ — cron background jobs (planned — Sprint 4)
+- OpenTelemetry — traces, metrics, logs (installed; wiring planned — Sprint 6)
 
-**Database**: Neon PostgreSQL
+**Database**: PostgreSQL (local Docker; Neon in production)
 
-**CI/CD**: GitHub Actions
+**CI**: GitHub Actions
 </technical_stack>
 
 <mandatory_reading>
@@ -65,6 +65,7 @@ Before starting any task, you MUST read the relevant documentation. Every import
 | UI design system, component styling rules, Tailwind conventions, layout patterns                | `docs/ai/ui-design-rules.md`          |
 | Sprint planning, feature roadmap, sprint status                                                 | `docs/ai/sprints/SPRINTS-OVERVIEW.md` |
 | Coding standards, naming conventions, architecture rules, testing conventions                   | `AGENTS.md`                           |
+| Dependency catalogue — active, planned, and unused packages                                     | `docs/DEPENDENCIES.md`                |
 
 **Rule**: If a relevant doc file exists for the task at hand, read it before writing any code. Do not assume patterns — verify them. When in doubt about a pattern, read the existing code before inventing a new approach.
 </mandatory_reading>
@@ -89,7 +90,6 @@ Follow these rules on every backend file without exception:
 
 - Domain-defined interfaces live in `Application`; EF Core implementations live in `Infrastructure`.
 - Single-entity lookups return `T?` (nullable) — never throw for not-found.
-- Use `ISpecification<T>` for composable query filters.
 - Always pass `CancellationToken` through to EF Core async calls.
 
 **Endpoints (Minimal APIs)**
@@ -110,7 +110,7 @@ Follow these rules on every backend file without exception:
 
 - Let `ExceptionHandlingMiddleware` handle all unhandled exceptions — never catch and swallow in services.
 - Throw `NotFoundException` for not-found cases that should surface as 404.
-- Return `null` / `bool` from services for expected not-found/failure cases.
+- Services return `Result<T>` for expected failure cases.
 - Never return raw exception messages to the client — middleware formats RFC 7807 `ProblemDetails`.
 
 **EF Core**
@@ -119,13 +119,13 @@ Follow these rules on every backend file without exception:
 - Use `IEntityTypeConfiguration<T>` classes (Fluent API) — never Data Annotations on entities.
 - snake_case column names (`HasColumnName("created_at")`), `HasPrecision(18, 2)` for decimals.
 - Enable retry-on-failure for Neon transient errors: `npgsqlOptions.EnableRetryOnFailure(3, ...)`.
-- Migrations go in `Infrastructure/Migrations`, run via `dotnet ef migrations add` with explicit `--context` and `--startup-project`.
+- Migrations go in `Infrastructure/Data/Migrations`, run via `dotnet ef migrations add` with explicit `--context`, `--project`, `--startup-project`, and `--output-dir`.
 
 **C# Style**
 
 - `_camelCase` private fields with underscore prefix.
 - `Async` suffix on all async methods.
-- `TreatWarningsAsErrors` is enabled — zero warnings policy, fix all warnings.
+- `TreatWarningsAsErrors` is currently commented out in `Directory.Build.props` — do not introduce new warnings; fix the 6 pre-existing test-project warnings when touched.
 - Use `record` types for immutable query params and DTOs where appropriate.
 - No `any`-equivalent patterns — use precise types or generics.
   </backend_best_practices>
@@ -144,14 +144,14 @@ Follow these rules on every frontend file without exception:
 **Imports**
 
 - Always use the `@/` path alias for all imports from `src/`.
-- Include `.tsx` extension when importing TSX files directly.
+- No `.tsx` extensions in import specifiers (existing code imports without them).
 - Group imports: external libraries → `@/api` → `@/components` → `@/hooks` → `@/types` → `@/utils`.
 
 **Components**
 
 - `PascalCase` function declarations — no arrow function components at module level.
 - Co-locate feature components, hooks, and types inside `src/features/<feature>/`.
-- Shared/reusable components go in `src/components/ui/`, `src/components/layout/`, or `src/components/forms/`.
+- Shared/reusable components go in `src/components/auth/` (AuthProvider, authContext) or `src/components/layout/` (Header, MainLayout, Sidebar).
 - Never fetch data directly inside a component — always use a custom hook.
 - Always render a user-facing error message when TanStack Query `error` state is present.
 
@@ -160,21 +160,21 @@ Follow these rules on every frontend file without exception:
 - All TanStack Query calls live inside custom hooks (`useTransactions`, `useCreateTransaction`, etc.).
 - Always define a query key factory: `const xyzKeys = { all, lists, list, details, detail }`.
 - Use `invalidateQueries` with the key factory on mutations — never hardcode key strings.
-- Set appropriate `staleTime` (default: 5 minutes for lists, 2 minutes for dashboard).
+- Set appropriate `staleTime` (5 minutes default for lists in `main.tsx`; 2 minutes for budget/spending queries — spending changes with transactions).
 - Pass `enabled: !!id` on detail queries gated on an ID.
 
 **Forms**
 
 - Every form: Zod schema → `type XyzFormData = z.infer<typeof xyzSchema>` → `useForm<XyzFormData>({ resolver: zodResolver(xyzSchema) })`.
-- Zod schemas in `src/utils/validators.ts` or co-located with the feature.
+- Zod schemas co-located with the feature (e.g. `src/features/budgets/schemas.ts`).
 - Use `Partial<T>` for `defaultValues` in form component props.
 - Display inline validation errors via `errors.field.message`.
 
 **API Module**
 
-- One API object per resource in `src/api/` (e.g., `transactionsApi`, `reportsApi`).
+- One API object per resource in `src/api/` (e.g., `transactionsApi`, `budgetsApi`).
 - All API functions are typed with request/response types from `src/types/`.
-- Axios instance configured in `src/api/client.ts` with the 401 → token refresh → redirect interceptor.
+- Use the fetch-based `apiClient` in `src/api/client.ts` — it attaches bearer tokens, handles 401 → refresh → retry, and redirects to `/login` on repeated 401. Pass `anonymous: true` for unauthenticated endpoints (login/register). Do not use `axios` (installed but unused).
 
 **Styling**
 
@@ -194,16 +194,16 @@ Follow these rules on every frontend file without exception:
 <testing_best_practices>
 **Backend (xUnit)**
 
-- Unit tests: pure domain/application logic — no I/O, no EF Core.
-- Integration tests: use TestContainers for real PostgreSQL.
+- Unit tests: pure domain/application logic — no I/O, no EF Core (projects: `Finance.UnitTests`, `Users.UnitTests`).
+- Mock dependencies with `NSubstitute` (`Substitute.For<T>()`); assert with `FluentAssertions` (global using) and xUnit asserts.
+- Integration tests with TestContainers are planned (Sprint 5) — not present yet.
 - Test class names mirror the class under test: `TransactionServiceTests`.
 - Method names: `MethodName_Scenario_ExpectedResult`.
-- Use `Assert.Equal`, `Assert.NotNull`, `Assert.Throws<T>` from xUnit — no third-party assertion libraries unless already installed.
 
-**Frontend (Vitest)**
+**Frontend (Vitest — planned, Sprint 5)**
 
-- Test files co-located with source: `*.test.ts` / `*.test.tsx`.
-- Use `@testing-library/react` for component tests.
+- Vitest, Testing Library, and MSW are installed as devDependencies — no test scripts or config exist yet. Do not claim `npm test` works.
+- Test files will be co-located with source: `*.test.ts` / `*.test.tsx`.
 - Mock API calls with `msw` (Mock Service Worker).
 - Test behavior, not implementation — query by role/label, not by class names.
   </testing_best_practices>
@@ -214,7 +214,7 @@ Follow these rules on every frontend file without exception:
 - Use Tailwind CSS exclusively — no inline styles, no CSS modules unless already established.
 - Follow the component and layout conventions found in existing feature folders under `frontend/src/features/`.
 - Use Lucide React for all icons — no other icon libraries.
-- Charts use Recharts or Chart.js (both installed) — check which is used in the existing feature before choosing.
+- Charts use Recharts (the only charting library installed — chart code arrives with Sprint 4).
   </ui_design_rules>
 
 <documentation>
