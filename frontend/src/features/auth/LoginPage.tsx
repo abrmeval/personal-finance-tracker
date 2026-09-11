@@ -50,8 +50,8 @@ export function LoginPage() {
         ClientLogger.LogError({
           message: "Unexpected error during login",
           details: error instanceof Error ? error.message : String(error),
-          context: "[onSubmit]",
-          path: "/auth/login",
+          context: "From onSubmit()",
+          path: "/login",
           statusCode: AppStatusCode.ClientError,
         } as ClientLogEntry);
         setErrorTitle("An unexpected error occurred. Please try again.");

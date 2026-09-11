@@ -1,53 +1,53 @@
 import { useEffect, useState } from "react";
 import { Plus, X } from "lucide-react";
 import {
-  useCategories,
-  useCreateCategory,
-  useUpdateCategory,
-  useDeleteCategory,
-} from "@/features/categories/hooks/useCategories";
-import { CategoryForm } from "@/features/categories/components/CategoryForm";
-import { CategoryList } from "@/features/categories/components/CategoryList";
-import type { Category } from "@/types/finance";
-import type { CategoryFormData } from "@/features/categories/schemas";
+  useBudgets,
+  useCreateBudget,
+  useUpdateBudget,
+  useDeleteBudget,
+} from "@/features/budgets/hooks/useBudgets";
+import { BudgetForm } from "@/features/budgets/components/BudgetForm";
+import { BudgetList } from "@/features/budgets/components/BudgetList";
+import type { BudgetWithSpending } from "@/types/finance";
+import type { BudgetFormData } from "@/features/budgets/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
 import { ApiError, AppStatusCode } from "@/types/http";
 import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
 
-export function CategoriesPage() {
+export function BudgetsPage() {
   useEffect(() => {
-    setDocumentTitle("Categories");
+    setDocumentTitle("Budgets");
   }, []);
 
-  const { data: response, isLoading, error } = useCategories();
-  const createMutation = useCreateCategory();
-  const updateMutation = useUpdateCategory();
-  const deleteMutation = useDeleteCategory();
+  const { data: response, isLoading, error } = useBudgets();
+  const createMutation = useCreateBudget();
+  const updateMutation = useUpdateBudget();
+  const deleteMutation = useDeleteBudget();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<BudgetWithSpending | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [modelErrors, setModelErrors] = useState<Record<
     string,
     string[]
   > | null>(null);
 
-  const categories = response?.data ?? [];
+  const budgets = response?.data ?? [];
 
   function handleOpenCreate() {
-    setEditingCategory(null);
+    setEditingBudget(null);
     setIsModalOpen(true);
   }
 
-  function handleOpenEdit(category: Category) {
-    setEditingCategory(category);
+  function handleOpenEdit(budget: BudgetWithSpending) {
+    setEditingBudget(budget);
     setIsModalOpen(true);
   }
 
   function handleCloseModal() {
     setIsModalOpen(false);
-    setEditingCategory(null);
+    setEditingBudget(null);
     setErrorDetails(null);
     setModelErrors(null);
   }
@@ -58,25 +58,27 @@ export function CategoriesPage() {
     setModelErrors(null);
   }
 
-  async function handleSubmit(data: CategoryFormData) {
+  async function handleSubmit(data: BudgetFormData) {
     setErrorDetails(null);
     setModelErrors(null);
 
     try {
-      if (editingCategory) {
+      if (editingBudget) {
         await updateMutation.mutateAsync({
-          id: editingCategory.id,
+          id: editingBudget.id,
           data: {
+            categoryId: data.categoryId,
             name: data.name,
-            icon: data.icon ?? null,
-            color: data.color ?? null,
+            limitAmount: data.limitAmount,
+            period: data.period,
           },
         });
       } else {
         await createMutation.mutateAsync({
+          categoryId: data.categoryId,
           name: data.name,
-          icon: data.icon ?? null,
-          color: data.color ?? null,
+          limitAmount: data.limitAmount,
+          period: data.period,
         });
       }
       handleCloseModal();
@@ -92,7 +94,7 @@ export function CategoriesPage() {
           message: "Unexpected error while submitting the request",
           details: error instanceof Error ? error.message : String(error),
           context: "[onSubmit]",
-          path: "/categories",
+          path: "/budgets",
           statusCode: AppStatusCode.ClientError,
         } as ClientLogEntry);
         setErrorDetails("An unexpected error occurred. Please try again.");
@@ -117,7 +119,7 @@ export function CategoriesPage() {
           message: "Unexpected error while submitting the request",
           details: error instanceof Error ? error.message : String(error),
           context: "From handleConfirmDelete()",
-          path: "/categories",
+          path: "/budgets",
           statusCode: AppStatusCode.ClientError,
         } as ClientLogEntry);
         setErrorDetails("An unexpected error occurred. Please try again.");
@@ -130,18 +132,18 @@ export function CategoriesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Categories</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Budgets</h1>
         <button
           onClick={handleOpenCreate}
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Add Category
+          Add Budget
         </button>
       </div>
 
-      <CategoryList
-        categories={categories}
+      <BudgetList
+        budgets={budgets}
         isLoading={isLoading}
         error={error}
         onEdit={handleOpenEdit}
@@ -150,10 +152,10 @@ export function CategoriesPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl max-h-[90dvh] overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                {editingCategory ? "Edit Category" : "New Category"}
+                {editingBudget ? "Edit Budget" : "New Budget"}
               </h2>
               <button
                 onClick={handleCloseModal}
@@ -168,22 +170,21 @@ export function CategoriesPage() {
                 {errorDetails}
               </div>
             )}
-            <CategoryForm
+            <BudgetForm
               defaultValues={
-                editingCategory
+                editingBudget
                   ? {
-                      name: editingCategory.name,
-                      icon: editingCategory.icon ?? "",
-                      color: editingCategory.color ?? "",
+                      categoryId: editingBudget.categoryId,
+                      name: editingBudget.name,
+                      limitAmount: editingBudget.limitAmount,
+                      period: editingBudget.period,
                     }
                   : undefined
               }
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
-              submitLabel={
-                editingCategory ? "Update Category" : "Create Category"
-              }
-              modelErrors= {modelErrors}
+              submitLabel={editingBudget ? "Update Budget" : "Create Budget"}
+              modelErrors={modelErrors}
             />
           </div>
         </div>
@@ -192,12 +193,9 @@ export function CategoriesPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Delete Category
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Delete Budget</h2>
             <p className="mt-2 text-sm text-gray-600">
               Are you sure you want to delete "{deleteTarget.name}"?
-              Transactions referencing this category will become uncategorized.
             </p>
             {errorDetails && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Personal.FinanceTracker.Finance;
 using Personal.FinanceTracker.Shared.Middleware;
@@ -17,6 +18,7 @@ builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    options.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
 });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

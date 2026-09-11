@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { transactionSchema } from '@/features/transactions/schemas';
 import type {
   TransactionFormData,
@@ -13,6 +13,7 @@ interface TransactionFormProps {
   onSubmit: (data: TransactionFormData) => void;
   isSubmitting: boolean;
   submitLabel?: string;
+  modelErrors?: Record<string, string[]> | null;
 }
 
 const TYPE_OPTIONS: { value: TransactionType; label: string }[] = [
@@ -25,12 +26,14 @@ export function TransactionForm({
   onSubmit,
   isSubmitting,
   submitLabel = 'Save Transaction',
+  modelErrors,
 }: TransactionFormProps) {
   const { data: categoriesResponse } = useCategories();
   const categories = categoriesResponse?.data ?? [];
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<TransactionFormInput, unknown, TransactionFormData>({
@@ -62,6 +65,12 @@ export function TransactionForm({
         {errors.description && (
           <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>
         )}
+        {modelErrors?.description &&
+          modelErrors.description.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -80,6 +89,12 @@ export function TransactionForm({
           {errors.amount && (
             <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>
           )}
+          {modelErrors?.amount &&
+            modelErrors.amount.map((msg, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {msg}
+              </p>
+            ))}
         </div>
 
         <div>
@@ -98,6 +113,12 @@ export function TransactionForm({
           {errors.type && (
             <p className="mt-1 text-xs text-red-600">{errors.type.message}</p>
           )}
+          {modelErrors?.type &&
+            modelErrors.type.map((msg, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {msg}
+              </p>
+            ))}
         </div>
       </div>
 
@@ -115,22 +136,40 @@ export function TransactionForm({
           {errors.date && (
             <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>
           )}
+          {modelErrors?.date &&
+            modelErrors.date.map((msg, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {msg}
+              </p>
+            ))}
         </div>
 
         <div>
           <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">
             Category
           </label>
-          <select
-            id="categoryId"
-            {...register('categoryId')}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          >
-            <option value="">Uncategorized</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+          <Controller
+            control={control}
+            name="categoryId"
+            render={({ field }) => (
+              <select
+                id="categoryId"
+                {...field}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              >
+                <option value="">Uncategorized</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
+          />
+          {modelErrors?.categoryId &&
+            modelErrors.categoryId.map((msg, idx) => (
+              <p key={idx} className="mt-1 text-xs text-red-600">
+                {msg}
+              </p>
             ))}
-          </select>
         </div>
       </div>
 
@@ -148,6 +187,12 @@ export function TransactionForm({
         {errors.notes && (
           <p className="mt-1 text-xs text-red-600">{errors.notes.message}</p>
         )}
+        {modelErrors?.notes &&
+          modelErrors.notes.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <button

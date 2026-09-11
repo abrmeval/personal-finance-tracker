@@ -17,6 +17,6 @@ public sealed class CreateCategoryValidator : AbstractValidator<CreateCategoryRe
 
         RuleFor(x => x.Color)
             .MaximumLength(20).WithMessage("Color cannot exceed 20 characters.")
-            .Matches(@"^#(?:[0-9a-fA-F]{3}){1,2}$").WithMessage("Color must be a valid hex color code.");
+            .Matches(@"^(#(?:[0-9a-fA-F]{3}){1,2})?$").WithMessage("Color must be a valid hex color code.");
     }
 }

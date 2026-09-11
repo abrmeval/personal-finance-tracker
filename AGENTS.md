@@ -1,255 +1,275 @@
 # AGENTS.md — Personal Finance Tracker
 
-Guidance for agentic coding agents operating in this repository.
+Guidance for agentic coding agents operating in this repository. When unsure about a pattern, read the relevant `docs/` file and existing code first — do not invent approaches.
 
 ---
 
-## Repository Overview
+## Project Overview
 
-Full-stack monorepo:
-- **Backend:** ASP.NET 10 modular monolith (`backend/`)
-- **Frontend:** React + Vite + TypeScript (`frontend/`)
-- **Docs:** Architecture and pattern documentation (`docs/`)
+Full-stack personal finance app (monorepo):
+- **Backend** — ASP.NET 10 modular monolith (`backend/`, solution `Personal.FinanceTracker.slnx`). Modules **Users** (JWT auth: register, login, refresh, revoke) and **Finance** (transactions, categories, budgets) are implemented; **Reporting** is planned (Sprint 4).
+- **Frontend** — React 19 + Vite 7 + TypeScript (`frontend/`), feature-based structure, TanStack Query for server state.
+- **Database** — PostgreSQL; local via Docker Compose (`infrastructure/`), Neon is the production target (Sprint 6).
+- Work is sprint-driven — check `docs/ai/sprints/SPRINTS-OVERVIEW.md` for current status before planning changes.
+
+## Tech Stack
+
+- Frontend: React 19, TypeScript 5.9 (strict), Vite 7, Tailwind CSS 4 (Vite plugin), TanStack Query 5, React Hook Form 7 + Zod 4, React Router 7, **native fetch** (not axios), Recharts 3, Lucide React, date-fns, clsx + tailwind-merge
+- Backend: ASP.NET 10 Minimal APIs (no MVC controllers), EF Core 10 + Npgsql, FluentValidation 12, JWT Bearer, Microsoft.AspNetCore.OpenApi + Scalar (dev-only API reference)
+- Tests: xUnit (`Finance.UnitTests`, `Users.UnitTests`); TestContainers integration tests planned (Sprint 5)
+- CI: GitHub Actions — build, lint, format check (warn-only), PR standard enforcement
 
 ---
 
-## Build, Lint, and Test Commands
+## Commands
 
 ### Frontend (`frontend/`)
 
 ```bash
-npm run dev          # Start Vite dev server with HMR
-npm run build        # Type-check (tsc -b) then bundle for production
-npm run lint         # Run ESLint across all TS/TSX files
-npm run preview      # Serve the production build locally
+copy .env.example .env   # REQUIRED first — dev/build load .env via dotenv-cli and fail without it
+npm install
+npm run dev              # Vite dev server at http://localhost:3000 (proxy /api/* -> http://localhost:5194)
+npm run build            # Type-check (tsc -b) then production build — run before finishing any frontend work
+npm run build-lint       # ESLint + type-check + build (full verification)
+npm run lint             # ESLint only
+npm run serve            # Build, then serve the production build
 ```
 
-**Testing (Vitest — to be added):**
-```bash
-npm test                                        # Run all tests
-npm run test:coverage                           # Run with coverage
-npx vitest run src/path/to/file.test.ts         # Run a single test file
-npx vitest run -t "test name"                   # Run a single test by name
-```
+- There is **no `npm test` script yet** (Vitest/MSW/Testing Library are installed as devDependencies; scripts arrive with Sprint 5).
+- `.env` contains `VITE_API_URL=/api` and `VITE_ENVIRONMENT`. Never commit `.env` files.
 
 ### Backend (`backend/`)
 
 ```bash
-dotnet build                                                  # Build the solution
-dotnet run --project src/Personal.FinanceTracker.Api         # Start the API
-dotnet format                                                  # Format all C# code
-
-dotnet test                                                    # Run all tests
-dotnet test tests/Finance.UnitTests                           # Run a single test project
-dotnet test --filter "FullyQualifiedName~MyMethodName"        # Run a single test by name
-dotnet test --filter "DisplayName=My test display name"       # Run by display name
-dotnet test --collect:"XPlat Code Coverage"                   # Run with coverage
-
-dotnet ef migrations add <MigrationName>                      # Add EF Core migration
-dotnet ef database update                                      # Apply pending migrations
+dotnet build backend/Personal.FinanceTracker.slnx                          # Build solution
+dotnet run --project backend/src/Personal.FinanceTracker.Api              # API at http://localhost:5194
+dotnet test backend/Personal.FinanceTracker.slnx                          # Run all tests
+dotnet test backend/tests/Finance.UnitTests                               # Run one test project
+dotnet test backend/Personal.FinanceTracker.slnx --filter "FullyQualifiedName~MyMethodName"  # One test
+dotnet format backend/Personal.FinanceTracker.slnx                        # Format C# code
+dotnet format backend/Personal.FinanceTracker.slnx --verify-no-changes --severity warn      # What CI checks
 ```
+
+- API docs: Scalar UI at `http://localhost:5194/scalar` (Development only — not Swagger).
+- Health: `http://localhost:5194/health/live` and `/health/ready`.
+
+### EF Core Migrations (two DbContexts — one per module, both must be applied)
+
+Run from `backend/`:
+
+```bash
+# Finance module
+dotnet ef migrations add <Name> --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext --output-dir Infrastructure/Data/Migrations
+dotnet ef database update --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext
+
+# Users module: --project src/Modules/Users/Personal.FinanceTracker.Users.csproj --context UsersDbContext
+```
+
+Requires the `dotnet-ef` global tool (`dotnet tool install --global dotnet-ef`).
+
+### Local environment
+
+- **Database:** `cd infrastructure && copy .env.example .env` (set `POSTGRES_USER/PASSWORD/DB`), then `docker compose up -d` — postgres:18 on `localhost:5432`.
+- **Backend secrets:** `backend/src/Personal.FinanceTracker.Api/appsettings.Local.json` (gitignored, explicitly loaded in `Program.cs`). There is no User Secrets setup — do not use `dotnet user-secrets`.
+- **Task runner (Windows + Windows Terminal):** `task local` (frontend preview + backend), `task local-debug` (Vite dev + backend), `task backend-format`. Alternative: `python run.py` opens both apps in terminal tabs.
+
+---
+
+## Boundaries
+
+**Always do:**
+- Read the sprint doc (`docs/ai/sprints/sprint-N.md`) and relevant `docs/` file before starting work; read `docs/ai/ui-design-rules.md` before any frontend UI work.
+- Verify with `dotnet build` + `npm run build` (and `npm run lint`) before finishing — every sprint's success criteria require clean builds.
+- Register new modules/endpoints via `AddXxxModule(...)` / `MapXxxEndpoints(...)` in the module's `DependencyInjection.cs`, wired in `Program.cs`.
+- When completing a sprint, update its status in both the sprint file header and `SPRINTS-OVERVIEW.md`.
+
+**Ask first:**
+- Changing auth token storage — the current `localStorage` approach is a known deferred audit finding (C-1, tracked in `SPRINTS-OVERVIEW.md` Known Gaps); refactor is owner-scheduled, not ad hoc.
+- Re-enabling `TreatWarningsAsErrors` (commented out in `Directory.Build.props`; 6 pre-existing warnings in test projects — fix warnings when touched, don't let new warnings in).
+
+**Never do:**
+- Store sensitive data (JWTs, refresh tokens, passwords, full user objects) in `localStorage`/`sessionStorage` in new code.
+- Create sprint documents outside `docs/ai/sprints/`.
+- Commit secrets (`appsettings.Local.json`, `.env` files are gitignored — keep it that way).
+- Use `axios` for new API code — the fetch-based `apiClient` in `src/api/client.ts` is the standard (the `axios` dependency is unused; do not add usages).
+- Put business logic in endpoints — endpoints are thin; logic belongs in `Application` services.
 
 ---
 
 ## Project Structure
 
 ```
-personal-finance-tracker/
-├── backend/
-│   ├── src/
-│   │   ├── Personal.FinanceTracker.Api/       # ASP.NET minimal API host
-│   │   ├── Personal.FinanceTracker.Shared/    # Shared kernel/utilities
-│   │   └── Modules/                           # (planned) Finance, Users, Reporting
-│   ├── tests/                                 # (planned) xUnit test projects
-│   └── Directory.Build.props                  # Shared MSBuild properties
-├── frontend/
-│   ├── src/
-│   │   ├── api/                               # Axios client + API modules
-│   │   ├── components/                        # Shared UI components
-│   │   ├── features/                          # Feature-based pages/logic
-│   │   ├── hooks/                             # Custom React hooks
-│   │   ├── types/                             # TypeScript type definitions
-│   │   └── utils/                             # Helper functions
-│   ├── eslint.config.js
-│   ├── tsconfig.app.json
-│   └── vite.config.ts
-└── docs/                                      # Architecture documentation
+backend/
+├── Personal.FinanceTracker.slnx              # Solution (XML format)
+├── Directory.Build.props                     # Nullable, ImplicitUsings, NetAnalyzers
+├── src/
+│   ├── Personal.FinanceTracker.Api/          # Host — Program.cs, appsettings.Local.json (gitignored)
+│   ├── Personal.FinanceTracker.Shared/       # ExceptionHandlingMiddleware, ValidationFilter<T>,
+│   │                                         # Entity, NotFoundException, ApiResponse<T>, ApiErrorCode
+│   └── Modules/
+│       ├── Users/                            # Auth (users.* schema)
+│       └── Finance/                          # Transactions, Categories, Budgets (finances.* schema)
+│           └── Domain / Application / Infrastructure / Api + DependencyInjection.cs
+└── tests/                                    # Finance.UnitTests, Users.UnitTests (xUnit)
+
+frontend/src/
+├── api/          # client.ts (fetch apiClient) + auth/budgets/categories/transactions modules
+├── components/   # Shared UI (auth/ — AuthProvider, layout/ — Header/Sidebar/MainLayout)
+├── features/     # auth/, transactions/, categories/, budgets/ — co-located pages/hooks/components/schemas
+├── hooks/  pages/  routes/  types/  utils/
+
+infrastructure/   # docker-compose.yml + .env.example (local PostgreSQL)
+docs/             # Architecture docs, sprint plans (see Documentation below)
+.opencode/        # opencode config: commands/role.md, skills/dotnet-best-practices
+.github/skills/   # finance-tracker-expert skill
 ```
 
-Each backend module follows Clean Architecture layers:
-`Domain` → `Application` → `Infrastructure` → `Api`
+Each backend module follows Clean Architecture with dependencies flowing inward only:
+`Api` → `Application` → `Domain`; `Infrastructure` implements `Application`/`Domain` interfaces.
 
 ---
 
-## TypeScript / Frontend Code Style
+## Code Style — Frontend
 
-### Compiler Settings (strict)
-- `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`
-- `verbatimModuleSyntax: true` — use `import type` for all type-only imports
+### Compiler settings (verified in `tsconfig.app.json`)
+- `strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`
+- `verbatimModuleSyntax: true` — always `import type` for type-only imports
 - `erasableSyntaxOnly: true` — no `const enum`, no namespaces
-- Target: `ES2022`, module resolution: `bundler`
+- Target ES2022, moduleResolution `bundler`, `@/*` path alias to `src/` (use it for all src imports)
 
-### Imports
-- Always use `import type` for type-only imports (enforced by `verbatimModuleSyntax`)
-- Group imports: external libraries → internal `@/api` → `@/components` → `@/hooks` → `@/types` → `@/utils`
-- Use the `@/` path alias for all imports from `src/`
-- Include `.tsx` extension when importing TSX files directly
+```ts
+import type { Transaction } from "@/types/finance";  // type-only import
+import { transactionsApi } from "@/api/transactions";
+```
 
-### Naming Conventions
-- **Components:** `PascalCase` function declarations (`function TransactionForm`)
-- **Hooks:** `camelCase` with `use` prefix (`useTransactions`, `useCreateTransaction`)
-- **Types/Interfaces:** `PascalCase` (`Transaction`, `CreateTransactionRequest`, `PagedResult<T>`)
-- **Type unions:** string literal union types (`'Income' | 'Expense'`)
-- **API modules:** camelCase object literals (`transactionsApi`, `reportsApi`)
-- **Zod schemas:** camelCase with `Schema` suffix (`transactionSchema`)
-- **Inferred form types:** `type XyzFormData = z.infer<typeof xyzSchema>`
-- **Query key factories:** `const xyzKeys = { all, lists, list, details, detail }` pattern
+- Import order: external libraries → `@/api` → `@/components` → `@/hooks` → `@/types` → `@/utils`.
+- No `.tsx` extensions in import specifiers (existing code imports without them).
+- No `any` — precise types, generics, or `unknown` with guards. `interface` for object shapes; `type` for unions.
+- Mirror backend DTOs exactly in `src/types/` (e.g. `PagedResult<T>`, `BudgetWithSpending`).
 
-### Types
-- No `any` — use precise types or generics
-- Prefer `interface` for object shapes; `type` for unions and aliases
-- Use `Partial<T>` for optional defaults in component props
-- Mirror backend DTO types exactly (`PagedResult<T>`, `Transaction`, etc.)
+### Naming
+- Components: `PascalCase` function declarations. Hooks: `useXxx`. API modules: `xxxApi`. Zod schemas: `xxxSchema`. Query key factories: `xxxKeys`. Types: `PascalCase`. String unions for enums (`'Income' | 'Expense'`).
 
-### Error Handling (Frontend)
-- Use TanStack Query `error` state in components; render a user-facing error message
-- Handle form validation errors inline via React Hook Form + Zod (`errors.field.message`)
-- Axios interceptor handles 401 → token refresh → retry → redirect to `/login`
+### Patterns
+- All data access via custom hooks (TanStack Query); never fetch inside components. Use the query key factory and invalidate via it — never hardcode key strings. Cross-feature dependency example: transaction mutations invalidate `budgetKeys.all` because budget spending depends on transactions.
 
----
+```ts
+export const transactionKeys = {
+  all: ["transactions"] as const,
+  lists: () => [...transactionKeys.all, "list"] as const,
+  // list(filters), details(), detail(id) ...
+};
+```
 
-## React Patterns
-
-- **Feature-based folder structure:** co-locate components, hooks, and types per feature
-- **Custom hooks as data layer:** all TanStack Query calls inside custom hooks (`useTransactions`, etc.)
-- **Consistent cache invalidation:** use query key factory pattern for `invalidateQueries`
-- **No global state library** (no Redux/Zustand) — TanStack Query manages server state
-- **Form pattern:** Zod schema → `useForm<FormData>` → controlled inputs → submit handler
+- Forms: Zod schema (co-located with the feature, e.g. `features/budgets/schemas.ts`) → `type XyzFormData = z.infer<typeof xyzSchema>` → `useForm<XyzFormData>({ resolver: zodResolver(xyzSchema) })` → inline errors via `errors.field.message`.
+- HTTP: use `apiClient.get/post/put/patch/delete` from `src/api/client.ts`. It handles bearer tokens, 401 → refresh → retry, and logout redirect. Pass `anonymous: true` for unauthenticated endpoints (login/register).
+- Styling: Tailwind CSS exclusively; `clsx` + `tailwind-merge` for conditional classes; follow `docs/ai/ui-design-rules.md`.
+- Shared formatters live in `src/utils/formatters.ts` (`formatCurrency`, `formatDate`).
 
 ---
 
-## C# / Backend Code Style
+## Code Style — Backend
 
-### Project Settings (`Directory.Build.props`)
-- `<Nullable>enable</Nullable>` — nullable reference types required everywhere
-- `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` — zero warnings policy
-- `<ImplicitUsings>enable</ImplicitUsings>` — no explicit BCL `using` statements
-- Roslyn analyzers (`Microsoft.CodeAnalysis.NetAnalyzers`) enforced
+### Project settings
+- `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`, NetAnalyzers enforced.
+- `TreatWarningsAsErrors` is currently **commented out** — do not introduce new warnings; fix the 6 pre-existing test-project warnings when touched.
 
-### Naming Conventions
-- **Classes/Records:** `PascalCase`
-- **Private fields:** `_camelCase` with underscore prefix (`_repository`, `_logger`)
-- **Async methods:** `Async` suffix (`GetAllAsync`, `CreateAsync`)
-- **Endpoints:** static classes with extension methods (`TransactionEndpoints.MapTransactionEndpoints`)
-- **DTOs:** `XxxRequest` / `XxxResponse` suffix
+### Naming
+- Classes/records `PascalCase`; private fields `_camelCase`; async methods `Async` suffix; DTOs `XxxRequest`/`XxxResponse`; validators `CreateXxxValidator`/`UpdateXxxValidator`.
 
-### Architecture Rules
-- Dependencies always flow inward: `Api` → `Application` → `Domain`; `Infrastructure` implements `Application` interfaces
-- Domain entities use private constructors + static `Create(...)` factory methods
-- Repositories return `T?` (nullable) for single-entity lookups — never throw for not-found
-- Modules register themselves via `AddXxxModule(IServiceCollection, IConfiguration)` and `MapXxxEndpoints(IEndpointRouteBuilder)`
+### Domain entities (verified pattern)
+- Private constructors + static `Create(...)` factory; `private set` on all properties; extend `Entity` from Shared. `ArgumentException` only for truly invalid state inside factories/update methods. Soft-delete via `IsActive` + `Deactivate()`.
 
-### Error Handling (Backend)
-- Global `ExceptionHandlingMiddleware` maps exceptions to RFC 7807 `ProblemDetails`:
-  - `ValidationException` → 400
-  - `UnauthorizedAccessException` → 401
-  - `NotFoundException` → 404
-  - Unhandled → 500
-- `ValidationFilter<T>` endpoint filter handles request validation before handlers are reached
-- Throw `ArgumentException` only in domain entities for truly invalid state
-- Use `null` / `bool` return values for expected not-found or failure cases — not exceptions
+```csharp
+public sealed class Budget : Entity
+{
+    public string Name { get; private set; } = string.Empty;
+    private Budget() { }
+    public static Budget Create(Guid userId, Guid categoryId, string name, decimal limitAmount, BudgetPeriod period)
+    { /* validate, throw ArgumentException, return new Budget { ... } */ }
+}
+```
 
-### C# Patterns
-- Minimal APIs with endpoint extension methods (no MVC controllers)
-- Repository pattern: domain-defined interfaces in `Application`, EF Core implementations in `Infrastructure`
-- Specification pattern (`ISpecification<T>`) for composable query filters
-- `record` types for immutable query params
-- Background jobs with TickerQ using `[TickerFunction("Name", "cron")]` attribute
+### Endpoints (Minimal APIs)
+- Static `XxxEndpoints` classes with `MapXxxEndpoints(this IEndpointRouteBuilder)` extension methods; `MapGroup("/api/xxx").WithTags(...).RequireAuthorization()`; `AddEndpointFilter<ValidationFilter<TRequest>>()` on mutating endpoints; return `TypedResults` (not `Results`).
+
+```csharp
+var group = app.MapGroup("/api/budgets").WithTags("Budgets").RequireAuthorization();
+group.MapPost("/", CreateAsync).AddEndpointFilter<ValidationFilter<CreateBudgetRequest>>();
+```
+
+### EF Core / Infrastructure
+- One `DbContext` per module, isolated to its schema (`HasDefaultSchema("finances")` / `"users"`).
+- Fluent API via `IEntityTypeConfiguration<T>` — never data annotations. snake_case columns (`HasColumnName("created_at")`), `timestamptz`, `HasPrecision(18, 2)` on decimals, partial unique indexes for soft-delete (`WHERE is_active`).
+- `EnableRetryOnFailure` is configured in each module's `DependencyInjection.cs` (Npgsql transient fault handling).
+- Migrations live in `Infrastructure/Data/Migrations` (see commands above for exact flags).
+- Repositories: interfaces in Domain/Application, EF implementations in Infrastructure; single-entity lookups return `T?` — never throw for not-found.
+- Services return `Result<T>` for failure cases; throw `NotFoundException` only where a 404 should surface.
+
+### Error handling
+- `ExceptionHandlingMiddleware` maps exceptions to RFC 7807 `ProblemDetails` (`ValidationException` → 400, `UnauthorizedAccessException` → 401, `NotFoundException` → 404, unhandled → 500). Never catch-and-swallow in services; never return raw exception messages.
+- Error codes: add constants to `Shared/Constants/ApiErrorCode.cs` (e.g. `BUDGET_NOT_FOUND`, `DUPLICATE_BUDGET_CATEGORY`).
+- Enums serialize as JSON strings (`"Income"`/`"Expense"`) via `JsonStringEnumConverter` in `Program.cs`.
 
 ---
 
 ## Security Rules
 
-### Client-Side Storage
-
-- **Never store sensitive data in `localStorage`, `sessionStorage`, or JavaScript-accessible cookies.**
-- Sensitive data includes: passwords, JWT access tokens, full user PII beyond display name, payment details, or any value that grants access to resources.
-- `localStorage` and `sessionStorage` are accessible to any JavaScript running on the page — an XSS vulnerability exposes everything stored there.
-- **What is acceptable in `localStorage`:**
-  - Non-sensitive UI preferences (theme, sidebar collapsed state, locale)
-  - Non-sensitive display values (first name, display name — purely cosmetic, no access grants)
-- **What is never acceptable in `localStorage`:**
-  - JWT access tokens or refresh tokens
-  - Passwords or password hashes
-  - Full user objects containing email + id combinations used for authorization
-- **JWT tokens:** Access tokens should be held in memory (React state / context). Refresh tokens should be stored in `HttpOnly`, `Secure`, `SameSite=Strict` cookies — set by the server, inaccessible to JavaScript.
-- **Cookies:** May be used for session management only if set with `HttpOnly` and `Secure` flags. Never write sensitive values to cookies from JavaScript (`document.cookie`).
-- When in doubt, ask: "If an attacker injects a `<script>` tag, can they read this value?" If yes — do not store it client-side.
+- **Never store sensitive data in `localStorage`, `sessionStorage`, or JS-accessible cookies** in new code: no JWT access/refresh tokens, passwords, or full user objects. Acceptable: UI preferences and purely cosmetic display values.
+- Note: the current `src/api/client.ts` persists tokens in `localStorage` — a **known CRITICAL audit finding (C-1) deferred by owner decision** to a dedicated auth-hardening task. Do not spread the pattern; target state is access token in memory and refresh token in `HttpOnly`, `Secure`, `SameSite=Strict` cookies set by the server.
+- Never write sensitive values from JavaScript (`document.cookie`); cookies for sessions must be `HttpOnly` + `Secure`.
+- Test: "If an attacker injects a `<script>` tag, can they read this value?" If yes — do not store it client-side.
+- Never commit secrets: local secrets go in `appsettings.Local.json` or `.env` files (both gitignored); docs use placeholders only.
 
 ---
 
 ## Testing Conventions
 
-### Backend (xUnit + TestContainers)
-- Unit tests: `tests/<Module>.UnitTests/` — pure domain/application logic, no I/O
-- Integration tests: `tests/<Module>.IntegrationTests/` — use TestContainers for real DB
-- Test class name mirrors the class under test: `TransactionServiceTests`
-- Test method name: `MethodName_Scenario_ExpectedResult`
-- Use `Assert.Equal`, `Assert.NotNull`, `Assert.Throws<T>` from xUnit
+### Backend (xUnit — exists today)
+- Unit tests in `backend/tests/<Module>.UnitTests/` — pure domain/application logic, no I/O.
+- Mock dependencies with NSubstitute (`Substitute.For<T>()`); assert with FluentAssertions (global using in `Usings.cs`).
+- Test class mirrors the class under test (`TransactionServiceTests`); method names `MethodName_Scenario_ExpectedResult`.
+- Integration tests with TestContainers are planned (Sprint 5) — not present yet.
 
 ### Frontend (Vitest — planned)
-- Test files: `*.test.ts` / `*.test.tsx` co-located with source files
-- Use `@testing-library/react` for component tests
-- Mock API calls with `msw` (Mock Service Worker)
+- Test files `*.test.ts(x)` co-located with source; `@testing-library/react` for components; mock API with `msw`; query by role/label, not class names.
+- No test scripts exist yet — do not claim `npm test` works.
 
 ---
 
-## Sprint Documentation
+## Workflow & CI
 
-All sprint planning and execution documents live at:
-
-```
-docs/ai/sprints/
-├── SPRINTS-OVERVIEW.md   # Master plan — all sprints, goals, sequencing
-├── sprint-0.md           # Foundation & Tooling
-├── sprint-1.md           # Users Module / Authentication
-├── sprint-2.md           # Finance Module: Transactions & Categories
-├── sprint-3.md           # Finance Module: Budgets
-├── sprint-4.md           # Reporting Module & Dashboard
-├── sprint-5.md           # Testing
-└── sprint-6.md           # DevOps & Infrastructure
-```
-
-### Rules for Sprint Documents
-
-- **Never create sprint docs outside `docs/ai/sprints/`** — this is the canonical location
-- Each sprint file is named `sprint-N.md` (lowercase, hyphenated)
-- The `SPRINTS-OVERVIEW.md` must be updated when any sprint's status changes
-- Sprint status values: `New` | `In Progress` | `Done`
-- When a sprint executor completes a sprint, it must update the status in both the sprint file header and in `SPRINTS-OVERVIEW.md`
-- The `designer-enforcer` agent must be invoked at the end of every sprint before marking it Done
+- **Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`, ...).
+- **PRs to `main` are validated by `pr-standard.yml` (required for merge):**
+  - Title: `PR: [Area] Title` — optional area in brackets (`[Finance]`, `[Users]`, `[CI]`, `[Docs]`), imperative mood, at most 150 chars.
+  - Body must contain `# Summary:` (2-3 sentences) before `# Key Changes:` (bullet list).
+- **Dev CI** (`dev.yml`, on push/PR to `main`): backend restore + Release build + unit tests (`dotnet test`, TRX results uploaded on failure) + `dotnet format --verify-no-changes --severity warn`; frontend `npm ci` + lint + build. Node 20 / .NET 10.
+- Commenting `/oc` or `/opencode` on an issue/PR triggers an automated code-reviewer agent run.
+- Sprint status values: `New` | `In Progress` | `Done` — update in both the sprint file header and `SPRINTS-OVERVIEW.md` when status changes. The `designer-enforcer` agent must run at the end of every sprint before marking it Done.
 
 ---
 
 ## Key Dependencies
 
-### Frontend
-| Package | Purpose |
-|---------|---------|
-| `react` + `react-dom` | UI framework |
-| `typescript` + `vite` | Build toolchain |
-| `@tanstack/react-query` | Server state management |
-| `axios` | HTTP client |
-| `react-hook-form` + `zod` | Form handling and validation |
-| `react-router-dom` | Client-side routing |
-| `recharts` / `chart.js` | Data visualization |
+- Frontend: `react`/`react-dom` 19, `typescript` 5.9, `vite` 7, `tailwindcss` 4, `@tanstack/react-query` 5, `react-hook-form` 7 + `zod` 4 + `@hookform/resolvers`, `react-router-dom` 7, `recharts` 3, `lucide-react`, `date-fns` 4, `clsx` + `tailwind-merge`, `dotenv-cli` (env loading in scripts)
+- Backend: EF Core 10 + `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` 12, `Microsoft.AspNetCore.Authentication.JwtBearer`, `Microsoft.AspNetCore.OpenApi` + `Scalar.AspNetCore`, `AspNetCore.HealthChecks.NpgSql` (referenced, not yet wired)
+- Planned, not installed: TickerQ (background jobs, Sprint 4), OpenTelemetry wiring (packages installed, Sprint 6)
 
-### Backend
-| Package | Purpose |
-|---------|---------|
-| ASP.NET 10 Minimal APIs | HTTP host and routing |
-| Entity Framework Core | ORM with PostgreSQL (`Npgsql`) |
-| FluentValidation | Request validation |
-| xUnit + TestContainers | Testing |
-| OpenTelemetry | Traces, metrics, logs (OTLP export) |
-| TickerQ | Cron-based background jobs |
+---
+
+## Documentation (read only when relevant)
+
+| File | Read when |
+|------|-----------|
+| `docs/01-Project-Structure.md` | Monorepo layout, module organization |
+| `docs/02-Backend-Documentation.md` | Clean Architecture, EF Core, endpoint/validation patterns |
+| `docs/03-Frontend-Documentation.md` | React/TanStack Query/form/routing patterns |
+| `docs/04-DevOps-Deployment.md` | CI/CD pipelines, environment configuration |
+| `docs/05-Infrastructure.md` | Neon PostgreSQL, deployment targets, secrets |
+| `docs/06-Local-Development.md` | Local setup (partially stale — trust this file's Commands section) |
+| `docs/DEPENDENCIES.md` | NuGet/npm dependency catalogue |
+| `docs/DESIGN_PATTERNS.md` | Backend patterns catalogue (Result, Repository, Options) |
+| `docs/ai/ui-design-rules.md` | Any frontend UI work (colors, spacing, component conventions) |
+| `docs/ai/sprints/SPRINTS-OVERVIEW.md` | Sprint scope, sequencing, status, known gaps |
+| `docs/ai/sprints/sprint-N.md` | The current sprint's detailed task list |
+| `.github/skills/finance-tracker-expert/SKILL.md` | Repo-expert agent skill |

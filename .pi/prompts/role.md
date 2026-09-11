@@ -1,6 +1,5 @@
 ---
 description: A Full stack developer role for the Personal Finance Tracker project — React + TypeScript frontend, ASP.NET 10 modular monolith backend, PostgreSQL database (Neon in production).
-agent: build
 ---
 
 <role>

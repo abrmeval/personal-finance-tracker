@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { transactionsApi } from '@/api/transactions';
+import { budgetKeys } from '@/features/budgets/hooks/useBudgets';
 import type { CreateTransactionRequest, UpdateTransactionRequest, TransactionFilters } from '@/types/finance';
 
 export const transactionKeys = {
@@ -24,6 +25,7 @@ export function useCreateTransaction() {
     mutationFn: (data: CreateTransactionRequest) => transactionsApi.create(data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -35,6 +37,7 @@ export function useUpdateTransaction() {
       transactionsApi.update(id, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }
@@ -45,6 +48,7 @@ export function useDeleteTransaction() {
     mutationFn: (id: string) => transactionsApi.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: transactionKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
   });
 }

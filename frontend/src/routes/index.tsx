@@ -7,6 +7,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { TransactionsPage } from "@/features/transactions/pages/TransactionsPage";
 import { CategoriesPage } from "@/features/categories/pages/CategoriesPage";
+import { BudgetsPage } from "@/features/budgets/pages/BudgetsPage";
 
 const router = createBrowserRouter([
   {
@@ -42,12 +43,7 @@ const router = createBrowserRouter([
           },
           {
             path: "budgets",
-            element: (
-              <PlaceholderPage
-                title="Budgets"
-                message="Budgets — coming in Sprint 3"
-              />
-            ),
+            element: <BudgetsPage />,
           },
           {
             path: "reports",

@@ -13,4 +13,6 @@ public static class ApiErrorCode
     public const string CategoryNotFound = "CATEGORY_NOT_FOUND";
     public const string TransactionNotFound = "TRANSACTION_NOT_FOUND";
     public const string DuplicateCategoryName = "DUPLICATE_CATEGORY_NAME";
+    public const string BudgetNotFound = "BUDGET_NOT_FOUND";
+    public const string DuplicateBudgetCategory = "DUPLICATE_BUDGET_CATEGORY";
 }

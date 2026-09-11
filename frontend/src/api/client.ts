@@ -51,7 +51,6 @@ async function getValidAccessToken(): Promise<string | null> {
 
 async function parseResponseAsync<T>(
   response: Response,
-  path?: string,
 ): Promise<ApiResponse<T>> {
   // Handle 204 No Content separately since it has no body
   if (response.status === AppStatusCode.NoContent) {
@@ -63,24 +62,13 @@ async function parseResponseAsync<T>(
   }
 
   const responseBody = (await response.json()) as ApiResponse<T>;
-
-  if (!response.ok) {
-    throw new ApiError(
-      responseBody.error?.title || "Error",
-      responseBody.error?.detail || response.statusText,
-      "[parseResponse]",
-      path,
-      response?.status,
-    );
-  }
-
   return responseBody;
 }
 
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  anonymous : boolean = false,
+  anonymous: boolean = false,
   retry = true,
 ): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = {
@@ -94,7 +82,18 @@ async function request<T>(
     // If the request is marked as anonymous, skip attaching tokens and directly make the request
     if (anonymous) {
       response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-      return await parseResponseAsync<T>(response, path);
+      const apiResponse = await parseResponseAsync<T>(response);
+
+      if (apiResponse.isOk) return apiResponse;
+
+      throw new ApiError(
+        apiResponse.error?.title || "Error",
+        apiResponse.error?.detail || response.statusText,
+        "From parseResponseAsync()",
+        path,
+        response?.status,
+        apiResponse.error?.modelErrors,
+      );
     }
 
     const token = await getValidAccessToken();
@@ -129,20 +128,43 @@ async function request<T>(
         throw new ApiError(
           "That was an unauthorized request. Please log in again.",
           retried.statusText,
-          "[request]",
+          "From request()",
           path,
           retried.status,
         );
       }
-      return await parseResponseAsync<T>(retried);
+      const apiResponse = await parseResponseAsync<T>(retried);
+
+      if (apiResponse.isOk) return apiResponse;
+
+      throw new ApiError(
+        apiResponse.error?.title || "Error",
+        apiResponse.error?.detail || response.statusText,
+        "From parseResponseAsync()",
+        path,
+        response?.status,
+        apiResponse.error?.modelErrors,
+      );
     }
-    return await parseResponseAsync<T>(response);
+
+    const apiResponse = await parseResponseAsync<T>(response);
+
+    if (apiResponse.isOk) return apiResponse;
+
+    throw new ApiError(
+      apiResponse.error?.title || "Error",
+      apiResponse.error?.detail || response.statusText,
+      "From parseResponseAsync()",
+      path,
+      response?.status,
+      apiResponse.error?.modelErrors,
+    );
   } catch (error) {
     if (error instanceof TypeError) {
       const apiError = new ApiError(
         "There was a network error.",
         error.message,
-        "[request]",
+        "From request()",
         path,
         AppStatusCode.NetworkError,
       );
@@ -163,8 +185,7 @@ async function request<T>(
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
 
-        if(!anonymous)
-          window.location.href = "/login";
+        if (!anonymous) window.location.href = "/login";
       }
 
       ClientLogger.LogError({
@@ -177,22 +198,14 @@ async function request<T>(
       throw error;
     }
 
-    const apiError = new ApiError(
-      "An unexpected error occurred.",
-      error instanceof Error ? error.message : String(error),
-      "[request]",
-      path,
-      response?.status,
-    );
-
     ClientLogger.LogError({
-      message: apiError.title,
+      message: "An unexpected error occurred.",
       statusCode: response?.status,
-      details: apiError.message,
-      path: apiError.instance,
-      context: apiError.context,
+      details: error instanceof Error ? error.message : String(error),
+      path: path,
+      context: "From request()",
     });
-    throw apiError;
+    throw error;
   }
 }
 

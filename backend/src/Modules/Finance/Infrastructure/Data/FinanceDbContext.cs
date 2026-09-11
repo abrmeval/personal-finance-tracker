@@ -7,6 +7,7 @@ public sealed class FinanceDbContext(DbContextOptions<FinanceDbContext> options)
 {
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Budget> Budgets => Set<Budget>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
