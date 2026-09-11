@@ -133,7 +133,7 @@ Full CRUD for transactions and categories, connected front-to-back with paginati
 
 **Duration:** 1 week
 **Doc:** [sprint-3.md](./sprint-3.md)
-**Status:** New
+**Status:** Done
 
 ### Goals
 Users can create budgets per category with period-based (daily/weekly/monthly/yearly) spending calculations and visual progress tracking.
@@ -247,4 +247,4 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 
 ---
 
-*Last updated: 08/09/2026*
+*Last updated: 10/09/2026*

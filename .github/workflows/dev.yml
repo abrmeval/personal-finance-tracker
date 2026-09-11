@@ -11,10 +11,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: dev-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
-    name: Backend — Build & Lint
+    name: Backend — Build, Test & Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -32,6 +37,26 @@ jobs:
       - name: Build
         working-directory: backend
         run: dotnet build Personal.FinanceTracker.slnx --configuration Release --no-restore
+
+      - name: Run unit tests
+        working-directory: backend
+        run: >
+          dotnet test Personal.FinanceTracker.slnx
+          --configuration Release
+          --no-build
+          --no-restore
+          --nologo
+          --logger trx
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: backend/TestResults/*.trx
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Check formatting (warn-only)
         working-directory: backend

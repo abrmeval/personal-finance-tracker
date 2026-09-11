@@ -1,7 +1,7 @@
 # Sprint 3 — Finance Module: Budgets
 
 **Duration:** 1 week
-**Status:** New
+**Status:** Done
 **Overview:** [SPRINTS-OVERVIEW.md](./SPRINTS-OVERVIEW.md)
 
 ---
@@ -13,6 +13,33 @@ Sprint 3 builds the Budgets feature on top of the Finance module established in 
 **This sprint depends on Sprint 2 being complete.** The Finance module project, `FinanceDbContext`, the `Category` entity, and the `finances` schema must all exist before any task in this sprint begins.
 
 > **Convention alignment (08/09/2026):** This plan was rewritten to match the **as-built** conventions from Sprints 0–2. Earlier revisions assumed nullable service returns, bare endpoint payloads, and an Axios client — none of which match the implemented code. Every code sample below mirrors an existing file; follow them exactly.
+
+---
+
+## Sprint Completion Record (10/09/2026)
+
+Sprint 3 is **complete** — delivered in `feat: add budgets end-to-end (sprint 3)` and refined by `feat: unify server error handling on finance pages`. All 17 tasks are Done and every success criterion has been verified:
+
+- `dotnet build` — 0 errors, 0 new warnings (the 6 pre-existing test-project warnings remain — tracked in `SPRINTS-OVERVIEW.md` Known Gaps)
+- `dotnet test` — 189/189 passing (130 `Finance.UnitTests` + 59 `Users.UnitTests`)
+- `npm run build-lint` — ESLint, `tsc -b`, and Vite production build all green
+- `finances.budgets` verified in PostgreSQL: all columns as specified (`limit_amount numeric(18,2)`, `timestamptz`, `is_active` default `true`), `idx_budgets_user_id`, and the partial unique index `idx_budgets_user_category WHERE is_active`
+
+### As-Built Deviations from the Plan
+
+The implementation deliberately evolved beyond this plan in four ways. The task samples below are the original plan, retained for history — where they disagree with this list, **the code wins**:
+
+1. **Budget category is mutable on update** (the plan said immutable). `UpdateBudgetRequest` includes `CategoryId` on both backend and frontend; `Budget.Update(...)` accepts and changes the category; `BudgetService.UpdateAsync` validates category existence and the one-active-budget-per-category rule **only when the category actually changes**; the update endpoint maps `CategoryNotFound` → 400 and `DuplicateBudgetCategory` → 409.
+2. **Validators gained a character whitelist** — both budget validators add `.Matches(@"^[a-zA-Z0-9áéíóúÁÉÍÓÚ\s'.,&()-*]+$")` on `Name` (accented characters allowed), mirroring the transaction/category validators.
+3. **Unified server error handling** — `BudgetsPage` and `BudgetForm` use the `ApiError` / `modelErrors` / `ClientLogger` pattern (from `feat: unify server error handling on finance pages`), not the `getErrorMessage` approach shown in the Task 17 sample. Server-side field errors render inline via `BudgetForm`'s `modelErrors` prop.
+4. **`BudgetForm` uses `Controller`** for the category `<select>` (instead of bare `register`) to support the `modelErrors` display.
+
+### Tests Delivered Beyond the Plan
+
+- `Finance.UnitTests/Domain/Entities/BudgetTests.cs` — `Create` / `Update` / `Deactivate` domain behaviour, including category change and same-category update
+- `Finance.UnitTests/Application/Validators/UpdateBudgetValidatorTests.cs` — `CategoryId`, `Name`, `LimitAmount`, and `Period` structural rules
+
+Still missing (Sprint 5 scope): `CreateBudgetValidatorTests` and `BudgetServiceTests`.
 
 ---
 
@@ -78,7 +105,7 @@ The cleanup items listed in earlier revisions of this document are **already res
 | Frontend HTTP: fetch-based `apiClient` (`BASE_URL` already includes `/api`), functions return the full `ApiResponse<T>` envelope | `src/api/client.ts`, `src/api/transactions.ts` |
 | Zod schemas in feature-level `schemas.ts` + `FormData`/`FormInput` types | `src/features/transactions/schemas.ts` |
 | Query key factories: `{ all, lists, details, detail }` (no `list(filters)` for unfiltered lists) | `src/features/categories/hooks/useCategories.ts` |
-| Pages own modal + delete-confirm state, `mutationError` via `getErrorMessage`, `setDocumentTitle` | `src/features/transactions/pages/TransactionsPage.tsx` |
+| Pages own modal + delete-confirm state, unified `ApiError` / `modelErrors` / `ClientLogger` error handling, `setDocumentTitle` | `src/features/budgets/pages/BudgetsPage.tsx`, `src/features/transactions/pages/TransactionsPage.tsx` |
 | Currency/date formatting: `Intl` with `es-MX` / MXN | `src/utils/formatters.ts` (extracted in this sprint) |
 | Mobile-first, 44px tap targets, `aria-label` on icon buttons | `docs/ai/ui-design-rules.md` |
 
@@ -99,7 +126,7 @@ The following items are tracked here for visibility and **should be planned into
 
 ### Task 1 — BudgetPeriod Enum
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add the `BudgetPeriod` enum to the Finance module's Domain layer, mirroring `TransactionType`. This enum defines the time window used to calculate whether spending is within the budget limit.
@@ -129,7 +156,7 @@ Add the `BudgetPeriod` enum to the Finance module's Domain layer, mirroring `Tra
 
 ### Task 2 — Budget Domain Entity
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `Budget` entity in the Finance module's Domain layer, mirroring `Category`. It extends `Entity` from `Personal.FinanceTracker.Shared.Abstractions`, uses a private constructor with a static `Create(...)` factory, validates inputs (throwing `ArgumentException` for invalid domain state, including the name-length guard `Category` has), and supports soft-delete via `IsActive` + `Deactivate()`.
@@ -226,7 +253,7 @@ Create the `Budget` entity in the Finance module's Domain layer, mirroring `Cate
 
 ### Task 3 — IBudgetRepository Interface
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Define the `IBudgetRepository` interface in the Domain layer — **`Domain/Interfaces/`, not `Application/Interfaces/`**, matching where `ITransactionRepository` and `ICategoryRepository` live. The interface is pure — no EF Core or infrastructure references. All methods accept a `CancellationToken`. All read methods filter `IsActive`.
@@ -262,7 +289,7 @@ Define the `IBudgetRepository` interface in the Domain layer — **`Domain/Inter
 
 ### Task 4 — Budget EF Core Configuration and Migration
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add an `IEntityTypeConfiguration<Budget>` Fluent API configuration mirroring `CategoryConfiguration`: snake_case column names, `timestamptz` for date columns, `HasPrecision(18, 2)` for the decimal limit, `is_active` with default `true`, `idx_` index names, and a **partial unique index** on `(user_id, category_id)` filtered by `is_active` to enforce the one-active-budget-per-category rule at the database level. Then generate and apply the migration.
@@ -380,7 +407,7 @@ Add an `IEntityTypeConfiguration<Budget>` Fluent API configuration mirroring `Ca
 
 ### Task 5 — BudgetRepository Implementation
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Implement `IBudgetRepository` in the Infrastructure layer using `FinanceDbContext`, mirroring `CategoryRepository`. Pass `CancellationToken` through to all EF Core async calls. `DeleteAsync` performs a soft-delete (`Deactivate()`), never a hard `Remove()`.
@@ -438,7 +465,7 @@ Implement `IBudgetRepository` in the Infrastructure layer using `FinanceDbContex
 
 ### Task 6 — Budget DTOs
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create request and response DTOs as sealed `record` types in the Application layer, mirroring `TransactionResponse` / `CategoryResponse`. The `BudgetWithSpendingResponse` is the primary response type used on the list and detail endpoints — it includes the computed spent amount and percentage.
@@ -469,7 +496,7 @@ Create request and response DTOs as sealed `record` types in the Application lay
        decimal LimitAmount,
        BudgetPeriod Period);
    ```
-   > `CategoryId` is intentionally absent — the category is immutable after creation (the `Budget.Update` method does not change it).
+    > **Superseded (as-built):** `CategoryId` IS present in `UpdateBudgetRequest` — budgets can change category on update, with existence and duplicate validation when the category changes. See Sprint Completion Record, deviation 1.
 
 3. Create `backend/src/Modules/Finance/Application/DTOs/Responses/BudgetResponse.cs`:
    ```csharp
@@ -520,7 +547,7 @@ Create request and response DTOs as sealed `record` types in the Application lay
 
 ### Task 7 — FluentValidation Validators
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create one `AbstractValidator<T>` per mutating request type in `Application/Validators/`, mirroring `CreateCategoryValidator`. Validators contain **structural rules only** (not-empty, range, length) — the one-budget-per-category and category-existence rules require the authenticated user's ID and the database, so they are enforced in `BudgetService` via `Result<T>` failures. This keeps validators infrastructure-free and testable without a DB.
@@ -591,7 +618,7 @@ Create one `AbstractValidator<T>` per mutating request type in `Application/Vali
 
 ### Task 8 — ApiErrorCode Constants, IBudgetService and BudgetService
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add budget error codes to the shared `ApiErrorCode` constants, then create the budget service interface in `Application/Interfaces` (where `ITransactionService` / `ICategoryService` live) and its implementation in `Infrastructure/Services`. All service methods return `Result<T>` — failures carry distinct `ErrorResult` codes so endpoints can map them to precise HTTP status codes. `BudgetService` handles all business logic: ownership validation, the one-active-budget-per-category rule, and spending calculation (querying `ITransactionRepository.GetTotalExpensesByCategoryAsync`, which already exists from Sprint 2).
@@ -802,7 +829,7 @@ Add budget error codes to the shared `ApiErrorCode` constants, then create the b
 
 ### Task 9 — BudgetEndpoints Minimal API
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `BudgetEndpoints` static class in the Api layer, mirroring `CategoryEndpoints` / `TransactionEndpoints`. All endpoints are scoped to the authenticated user via `ClaimsPrincipalExtensions.GetUserId()`. The group requires authorization. `ValidationFilter<T>` is applied to create and update endpoints. **Every response is wrapped in `ApiResponse<T>`** — the frontend client (`parseResponseAsync`) parses errors from the envelope, so bare payloads or raw `Conflict<string>` bodies break the client contract. The create endpoint maps failure codes to precise status codes: `CategoryNotFound` → 400, `DuplicateBudgetCategory` → 409.
@@ -1030,7 +1057,7 @@ Create the `BudgetEndpoints` static class in the Api layer, mirroring `CategoryE
 
 ### Task 10 — Register Budgets in FinanceModule
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Register `IBudgetRepository` and `IBudgetService` in the Finance module's `DependencyInjection` class alongside the existing transaction and category registrations. Validators are picked up automatically by the existing `AddValidatorsFromAssemblyContaining<CreateCategoryValidator>()` call (same assembly) — no extra registration is needed.
@@ -1065,7 +1092,7 @@ Register `IBudgetRepository` and `IBudgetService` in the Finance module's `Depen
 
 ### Task 11 — Frontend: Type Definitions
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Add budget type definitions to `src/types/finance.ts` — the single file Sprint 2 established for finance-domain types (`Category`, `Transaction`, etc.). Mirror the backend DTOs exactly. Use `BudgetPeriod` as a string literal union type, consistent with `TransactionType` (the backend's `JsonStringEnumConverter` serializes enum values as strings).
@@ -1120,7 +1147,7 @@ Add budget type definitions to `src/types/finance.ts` — the single file Sprint
 
 ### Task 12 — Frontend: budgetsApi Service Module
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the `budgetsApi` object in `src/api/budgets.ts`, mirroring `transactionsApi` / `categoriesApi`. The fetch-based `apiClient` from `src/api/client.ts` handles auth tokens and refresh — no manual header management. `BASE_URL` already includes `/api`, so paths are `/budgets`, **not** `/api/budgets`. Functions return the full `ApiResponse<T>` envelope — do not unwrap `.data` here; consumers unwrap at the component level.
@@ -1169,7 +1196,7 @@ Create the `budgetsApi` object in `src/api/budgets.ts`, mirroring `transactionsA
 
 ### Task 13 — Frontend: Custom Hooks and Cross-Feature Invalidation
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the TanStack Query hooks for budgets, mirroring `useCategories` (unfiltered list → `budgetKeys` has no `list(filters)` level). Mutations invalidate the `budgetKeys.lists()` key on success. **Additionally**, add budget invalidation to the existing transaction mutation hooks: budget spending is computed from transactions, so any transaction create/update/delete makes budget data stale — relying only on `staleTime` would serve outdated progress bars.
@@ -1253,7 +1280,7 @@ Create the TanStack Query hooks for budgets, mirroring `useCategories` (unfilter
 
 ### Task 14 — Frontend: Shared Formatters
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Extract `formatCurrency` and `formatDate` from `TransactionList` into a shared `src/utils/formatters.ts` (Sprint 4's dashboard also needs them — this avoids a third and fourth copy). Refactor `TransactionList` to import from the util and delete its local copies.
@@ -1295,7 +1322,7 @@ Extract `formatCurrency` and `formatDate` from `TransactionList` into a shared `
 
 ### Task 15 — Frontend: BudgetForm Component
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create the Zod schema in a feature-level `schemas.ts` file and `BudgetForm` mirroring `TransactionForm`: React Hook Form with the `useForm<BudgetFormInput, unknown, BudgetFormData>` triple-generic pattern (required for `z.coerce`), category dropdown populated from `useCategories` (consumed via the `ApiResponse` envelope), inline errors via `errors.field.message`, and the same Tailwind classes as `TransactionForm`. The form handles both create and update modes via an optional `defaultValues` prop. The category select is required — no "Uncategorized" option (a budget must target a category).
@@ -1470,7 +1497,7 @@ Create the Zod schema in a feature-level `schemas.ts` file and `BudgetForm` mirr
 
 ### Task 16 — Frontend: BudgetCard and BudgetList Components
 
-**Status:** New
+**Status:** Done
 
 **Description:**
 Create `BudgetCard` and `BudgetList`, mirroring the list/card patterns established in Sprint 2. `BudgetCard` displays budget info and a progress bar showing spending vs limit. `BudgetList` renders the list with loading skeleton, error state, and empty state. No data fetching inside these components — data arrives via props from `BudgetsPage`.
@@ -1625,10 +1652,10 @@ Create `BudgetCard` and `BudgetList`, mirroring the list/card patterns establish
 
 ### Task 17 — Frontend: BudgetsPage and Router Wire-up
 
-**Status:** New
+**Status:** Done
 
 **Description:**
-Create `BudgetsPage` mirroring `TransactionsPage`: it owns the data fetching (via `useBudgets` with envelope unwrapping), the create/edit modal state, the delete confirmation flow, `mutationError` handling via `getErrorMessage`, and `setDocumentTitle`. Note: the **update payload excludes `categoryId`** — the category is immutable after creation (`UpdateBudgetRequest` has no category field). Wire the page into the router at `/budgets`, replacing the placeholder.
+Create `BudgetsPage` mirroring `TransactionsPage`: it owns the data fetching (via `useBudgets` with envelope unwrapping), the create/edit modal state, the delete confirmation flow, `errorDetails`/`modelErrors` handling via the unified `ApiError` pattern (see Sprint Completion Record, deviation 3), and `setDocumentTitle`. **Superseded (as-built):** the update payload **includes `categoryId`** — budgets can change category on update (deviation 1). Wire the page into the router at `/budgets`, replacing the placeholder.
 
 **Steps:**
 
@@ -1835,7 +1862,7 @@ Create `BudgetsPage` mirroring `TransactionsPage`: it owns the data fetching (vi
 **Success Criteria:**
 - `/budgets` route renders the real `BudgetsPage` (not the placeholder)
 - Create, update, and delete flows work end-to-end
-- Update payload never includes `categoryId` — matches `UpdateBudgetRequest`
+- Update payload includes `categoryId` (category is mutable on update, with duplicate/existence validation — deviation 1)
 - Error state from `useBudgets` is rendered as a user-facing message
 - `BudgetsPage` contains no direct HTTP calls — only custom hook calls
 - Modal, delete-confirm, and `mutationError` patterns match `TransactionsPage`
@@ -1844,18 +1871,18 @@ Create `BudgetsPage` mirroring `TransactionsPage`: it owns the data fetching (vi
 
 ## Success Criteria — Sprint Complete
 
-- [ ] `dotnet build` passes with 0 errors and no new warnings (the 6 pre-existing test-project warnings are tracked separately)
-- [ ] `npm run build` passes with 0 TypeScript errors
-- [ ] `finances.budgets` table exists with all expected columns, `is_active`, and the partial unique index `idx_budgets_user_category`
-- [ ] `GET /api/budgets` returns all budgets for the authenticated user with spending data, wrapped in `ApiResponse<T>`
-- [ ] `POST /api/budgets` creates a budget; returns enveloped 409 if an active budget for the category exists; enveloped 400 if the category is not found
-- [ ] `PUT /api/budgets/{id}` updates a budget; returns enveloped 404 if not owned by the user
-- [ ] `DELETE /api/budgets/{id}` soft-deletes a budget; returns enveloped 404 if not owned by the user; a soft-deleted budget does not block creating a new budget for the same category
-- [ ] Frontend `/budgets` page is functional end-to-end (create, view, update, delete)
-- [ ] Progress bar displays correct spending percentage, threshold colours, and over-budget state
-- [ ] Creating/updating/deleting a transaction refreshes budget progress bars (cross-feature invalidation)
-- [ ] `formatCurrency` / `formatDate` live in `src/utils/formatters.ts` and `TransactionList` uses them with no visual change
+- [x] `dotnet build` passes with 0 errors and no new warnings (the 6 pre-existing test-project warnings are tracked separately)
+- [x] `npm run build` passes with 0 TypeScript errors
+- [x] `finances.budgets` table exists with all expected columns, `is_active`, and the partial unique index `idx_budgets_user_category`
+- [x] `GET /api/budgets` returns all budgets for the authenticated user with spending data, wrapped in `ApiResponse<T>`
+- [x] `POST /api/budgets` creates a budget; returns enveloped 409 if an active budget for the category exists; enveloped 400 if the category is not found
+- [x] `PUT /api/budgets/{id}` updates a budget; returns enveloped 404 if not owned by the user
+- [x] `DELETE /api/budgets/{id}` soft-deletes a budget; returns enveloped 404 if not owned by the user; a soft-deleted budget does not block creating a new budget for the same category
+- [x] Frontend `/budgets` page is functional end-to-end (create, view, update, delete)
+- [x] Progress bar displays correct spending percentage, threshold colours, and over-budget state
+- [x] Creating/updating/deleting a transaction refreshes budget progress bars (cross-feature invalidation)
+- [x] `formatCurrency` / `formatDate` live in `src/utils/formatters.ts` and `TransactionList` uses them with no visual change
 
 ---
 
-*Last updated: 08/09/2026*
+*Last updated: 10/09/2026*

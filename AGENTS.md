@@ -243,7 +243,7 @@ group.MapPost("/", CreateAsync).AddEndpointFilter<ValidationFilter<CreateBudgetR
 - **PRs to `main` are validated by `pr-standard.yml` (required for merge):**
   - Title: `PR: [Area] Title` — optional area in brackets (`[Finance]`, `[Users]`, `[CI]`, `[Docs]`), imperative mood, at most 150 chars.
   - Body must contain `# Summary:` (2-3 sentences) before `# Key Changes:` (bullet list).
-- **Dev CI** (`dev.yml`, on push/PR to `main`): backend restore + Release build + `dotnet format --verify-no-changes --severity warn`; frontend `npm ci` + lint + build. Node 20 / .NET 10.
+- **Dev CI** (`dev.yml`, on push/PR to `main`): backend restore + Release build + unit tests (`dotnet test`, TRX results uploaded on failure) + `dotnet format --verify-no-changes --severity warn`; frontend `npm ci` + lint + build. Node 20 / .NET 10.
 - Commenting `/oc` or `/opencode` on an issue/PR triggers an automated code-reviewer agent run.
 - Sprint status values: `New` | `In Progress` | `Done` — update in both the sprint file header and `SPRINTS-OVERVIEW.md` when status changes. The `designer-enforcer` agent must run at the end of every sprint before marking it Done.
 
