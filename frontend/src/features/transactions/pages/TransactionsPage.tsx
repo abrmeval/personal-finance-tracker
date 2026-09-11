@@ -11,7 +11,8 @@ import { TransactionList } from "@/features/transactions/components/TransactionL
 import type { Transaction, TransactionFilters } from "@/types/finance";
 import type { TransactionFormData } from "@/features/transactions/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
-import { getErrorMessage } from "@/utils/errors";
+import { ApiError, AppStatusCode } from "@/types/http";
+import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
 
 const DEFAULT_FILTERS: TransactionFilters = {
   page: 1,
@@ -33,7 +34,11 @@ export function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [modelErrors, setModelErrors] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
 
   const pagedData = response?.data;
   const transactions = pagedData?.items ?? [];
@@ -53,15 +58,20 @@ export function TransactionsPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingTransaction(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   function handleCloseDelete() {
     setDeleteTarget(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   async function handleSubmit(data: TransactionFormData) {
+    setErrorDetails(null);
+    setModelErrors(null);
+
     const payload = {
       description: data.description,
       amount: data.amount,
@@ -82,7 +92,22 @@ export function TransactionsPage() {
       }
       handleCloseModal();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "[onSubmit]",
+          path: "/transactions",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -92,7 +117,22 @@ export function TransactionsPage() {
       await deleteMutation.mutateAsync(deleteTarget.id);
       handleCloseDelete();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "From handleConfirmDelete()",
+          path: "/transactions",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -162,9 +202,9 @@ export function TransactionsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {mutationError && (
+            {errorDetails && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <TransactionForm
@@ -185,6 +225,7 @@ export function TransactionsPage() {
               submitLabel={
                 editingTransaction ? "Update Transaction" : "Create Transaction"
               }
+              modelErrors={modelErrors}
             />
           </div>
         </div>
@@ -199,9 +240,9 @@ export function TransactionsPage() {
             <p className="mt-2 text-sm text-gray-600">
               Are you sure you want to delete "{deleteTarget.description}"?
             </p>
-            {mutationError && (
+            {errorDetails && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <div className="mt-6 flex gap-3">

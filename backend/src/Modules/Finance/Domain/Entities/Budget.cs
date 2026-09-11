@@ -48,8 +48,11 @@ public sealed class Budget : Entity
         };
     }
 
-    public void Update(string name, decimal limitAmount, BudgetPeriod period)
+    public void Update(Guid categoryId, string name, decimal limitAmount, BudgetPeriod period)
     {
+        if (categoryId == Guid.Empty)
+            throw new ArgumentException("Category ID is required.", nameof(categoryId));
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Budget name is required.", nameof(name));
 
@@ -59,6 +62,7 @@ public sealed class Budget : Entity
         if (limitAmount <= 0)
             throw new ArgumentException("Limit amount must be greater than zero.", nameof(limitAmount));
 
+        CategoryId = categoryId;
         Name = name.Trim();
         LimitAmount = limitAmount;
         Period = period;

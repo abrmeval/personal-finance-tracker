@@ -82,7 +82,22 @@ public sealed class BudgetService(
             return Result<BudgetWithSpendingResponse>.Failure(new(ApiErrorCode.BudgetNotFound, "Budget not found."));
         }
 
-        budget.Update(request.Name, request.LimitAmount, request.Period);
+        if (request.CategoryId != budget.CategoryId)
+        {
+            if (!await categoryRepository.ExistsByUserAndIdAsync(userId, request.CategoryId, ct))
+            {
+                logger.LogWarning("Budget update failed: category {CategoryId} not found for user {UserId}", request.CategoryId, userId);
+                return Result<BudgetWithSpendingResponse>.Failure(new(ApiErrorCode.CategoryNotFound, "Category not found."));
+            }
+
+            if (await budgetRepository.ExistsByUserAndCategoryAsync(userId, request.CategoryId, ct))
+            {
+                logger.LogWarning("Budget update failed: a budget for category {CategoryId} already exists for user {UserId}", request.CategoryId, userId);
+                return Result<BudgetWithSpendingResponse>.Failure(new(ApiErrorCode.DuplicateBudgetCategory, "A budget already exists for this category."));
+            }
+        }
+
+        budget.Update(request.CategoryId, request.Name, request.LimitAmount, request.Period);
         await budgetRepository.SaveChangesAsync(ct);
 
         logger.LogInformation("Budget {BudgetId} updated by user {UserId}", budget.Id, userId);

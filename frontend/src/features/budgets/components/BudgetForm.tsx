@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { budgetSchema } from '@/features/budgets/schemas';
 import type {
   BudgetFormData,
@@ -13,6 +13,7 @@ interface BudgetFormProps {
   onSubmit: (data: BudgetFormData) => void;
   isSubmitting: boolean;
   submitLabel?: string;
+  modelErrors?: Record<string, string[]> | null;
 }
 
 const PERIOD_OPTIONS: { value: BudgetPeriod; label: string }[] = [
@@ -27,12 +28,14 @@ export function BudgetForm({
   onSubmit,
   isSubmitting,
   submitLabel = 'Save Budget',
+  modelErrors,
 }: BudgetFormProps) {
   const { data: categoriesResponse } = useCategories();
   const categories = categoriesResponse?.data ?? [];
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<BudgetFormInput, unknown, BudgetFormData>({
@@ -52,19 +55,31 @@ export function BudgetForm({
         <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700 mb-1">
           Category
         </label>
-        <select
-          id="categoryId"
-          {...register('categoryId')}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-        >
-          <option value="">Select a category…</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <Controller
+          control={control}
+          name="categoryId"
+          render={({ field }) => (
+            <select
+              id="categoryId"
+              {...field}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">Select a category…</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        />
         {errors.categoryId && (
           <p className="mt-1 text-xs text-red-600">{errors.categoryId.message}</p>
         )}
+        {modelErrors?.categoryId &&
+          modelErrors.categoryId.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <div>
@@ -81,6 +96,12 @@ export function BudgetForm({
         {errors.name && (
           <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
         )}
+        {modelErrors?.name &&
+          modelErrors.name.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -99,6 +120,12 @@ export function BudgetForm({
           {errors.limitAmount && (
             <p className="mt-1 text-xs text-red-600">{errors.limitAmount.message}</p>
           )}
+          {modelErrors?.limitAmount &&
+            modelErrors.limitAmount.map((msg, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {msg}
+              </p>
+            ))}
         </div>
 
         <div>
@@ -117,6 +144,12 @@ export function BudgetForm({
           {errors.period && (
             <p className="mt-1 text-xs text-red-600">{errors.period.message}</p>
           )}
+          {modelErrors?.period &&
+            modelErrors.period.map((msg, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {msg}
+              </p>
+            ))}
         </div>
       </div>
 

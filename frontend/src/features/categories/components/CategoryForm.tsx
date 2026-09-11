@@ -8,6 +8,7 @@ interface CategoryFormProps {
   onSubmit: (data: CategoryFormData) => void;
   isSubmitting: boolean;
   submitLabel?: string;
+  modelErrors?: Record<string, string[]> | null;
 }
 
 export function CategoryForm({
@@ -15,6 +16,7 @@ export function CategoryForm({
   onSubmit,
   isSubmitting,
   submitLabel = "Save Category",
+  modelErrors,
 }: CategoryFormProps) {
   const {
     register,
@@ -49,6 +51,13 @@ export function CategoryForm({
         {errors.name && (
           <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
         )}
+
+        {modelErrors?.name &&
+          modelErrors.name.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <div>
@@ -68,6 +77,13 @@ export function CategoryForm({
         {errors.icon && (
           <p className="mt-1 text-xs text-red-600">{errors.icon.message}</p>
         )}
+
+        {modelErrors?.icon &&
+          modelErrors.icon.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <div>
@@ -87,6 +103,13 @@ export function CategoryForm({
         {errors.color && (
           <p className="mt-1 text-xs text-red-600">{errors.color.message}</p>
         )}
+
+        {modelErrors?.color &&
+          modelErrors.color.map((msg, idx) => (
+            <p key={idx} className="text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
       </div>
 
       <button

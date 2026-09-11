@@ -36,7 +36,7 @@ public static class BudgetEndpoints
 
         group.MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateBudget")
-            .WithDescription("Update an existing budget's name, limit, or period.")
+            .WithDescription("Update an existing budget's category, name, limit, or period.")
             .AddEndpointFilter<ValidationFilter<UpdateBudgetRequest>>();
 
         group.MapDelete("/{id:guid}", DeleteAsync)
@@ -143,7 +143,7 @@ public static class BudgetEndpoints
         });
     }
 
-    private static async Task<Results<Ok<ApiResponse<BudgetWithSpendingResponse>>, NotFound<ApiResponse<BudgetWithSpendingResponse>>>> UpdateAsync(
+    private static async Task<Results<Ok<ApiResponse<BudgetWithSpendingResponse>>, BadRequest<ApiResponse<BudgetWithSpendingResponse>>, Conflict<ApiResponse<BudgetWithSpendingResponse>>, NotFound<ApiResponse<BudgetWithSpendingResponse>>>> UpdateAsync(
         Guid id,
         UpdateBudgetRequest request,
         ClaimsPrincipal user,
@@ -154,6 +154,35 @@ public static class BudgetEndpoints
         var result = await budgetService.UpdateAsync(userId, id, request, ct);
 
         if (result.IsFailure)
+        {
+            if (result.Error?.Code == ApiErrorCode.CategoryNotFound)
+                return TypedResults.BadRequest(new ApiResponse<BudgetWithSpendingResponse>
+                {
+                    IsOk = false,
+                    Error = new ApiError
+                    {
+                        Title = "Budget Update Failed",
+                        Status = StatusCodes.Status400BadRequest,
+                        Detail = result.Error?.Description,
+                    },
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    CodeText = "BAD_REQUEST"
+                });
+
+            if (result.Error?.Code == ApiErrorCode.DuplicateBudgetCategory)
+                return TypedResults.Conflict(new ApiResponse<BudgetWithSpendingResponse>
+                {
+                    IsOk = false,
+                    Error = new ApiError
+                    {
+                        Title = "Budget Update Failed",
+                        Status = StatusCodes.Status409Conflict,
+                        Detail = result.Error?.Description,
+                    },
+                    StatusCode = StatusCodes.Status409Conflict,
+                    CodeText = "CONFLICT"
+                });
+
             return TypedResults.NotFound(new ApiResponse<BudgetWithSpendingResponse>
             {
                 IsOk = false,
@@ -166,6 +195,7 @@ public static class BudgetEndpoints
                 StatusCode = StatusCodes.Status404NotFound,
                 CodeText = "NOT_FOUND"
             });
+        }
 
         return TypedResults.Ok(new ApiResponse<BudgetWithSpendingResponse>
         {

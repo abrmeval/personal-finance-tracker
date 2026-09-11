@@ -12,7 +12,8 @@ public sealed class CreateBudgetValidator : AbstractValidator<CreateBudgetReques
 
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("Budget name is required.")
-            .MaximumLength(150).WithMessage("Budget name cannot exceed 150 characters.");
+            .MaximumLength(150).WithMessage("Budget name cannot exceed 150 characters.")
+            .Matches(@"^[a-zA-Z0-9áéíóúÁÉÍÓÚ\s'.,&()-*]+$").WithMessage("Budget name contains invalid characters.");
 
         RuleFor(x => x.LimitAmount)
             .GreaterThan(0).WithMessage("Limit amount must be greater than zero.")

@@ -11,7 +11,8 @@ import { CategoryList } from "@/features/categories/components/CategoryList";
 import type { Category } from "@/types/finance";
 import type { CategoryFormData } from "@/features/categories/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
-import { getErrorMessage } from "@/utils/errors";
+import { ApiError, AppStatusCode } from "@/types/http";
+import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
 
 export function CategoriesPage() {
   useEffect(() => {
@@ -26,7 +27,11 @@ export function CategoriesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [modelErrors, setModelErrors] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
 
   const categories = response?.data ?? [];
 
@@ -43,15 +48,20 @@ export function CategoriesPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingCategory(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   function handleCloseDelete() {
     setDeleteTarget(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   async function handleSubmit(data: CategoryFormData) {
+    setErrorDetails(null);
+    setModelErrors(null);
+
     try {
       if (editingCategory) {
         await updateMutation.mutateAsync({
@@ -71,7 +81,22 @@ export function CategoriesPage() {
       }
       handleCloseModal();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "[onSubmit]",
+          path: "/categories",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -81,7 +106,22 @@ export function CategoriesPage() {
       await deleteMutation.mutateAsync(deleteTarget.id);
       handleCloseDelete();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "From handleConfirmDelete()",
+          path: "/categories",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -123,9 +163,9 @@ export function CategoriesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {mutationError && (
+            {errorDetails && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <CategoryForm
@@ -143,6 +183,7 @@ export function CategoriesPage() {
               submitLabel={
                 editingCategory ? "Update Category" : "Create Category"
               }
+              modelErrors= {modelErrors}
             />
           </div>
         </div>
@@ -158,9 +199,9 @@ export function CategoriesPage() {
               Are you sure you want to delete "{deleteTarget.name}"?
               Transactions referencing this category will become uncategorized.
             </p>
-            {mutationError && (
+            {errorDetails && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <div className="mt-6 flex gap-3">

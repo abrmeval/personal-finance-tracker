@@ -89,6 +89,7 @@ export interface CreateBudgetRequest {
 }
 
 export interface UpdateBudgetRequest {
+  categoryId: string;
   name: string;
   limitAmount: number;
   period: BudgetPeriod;

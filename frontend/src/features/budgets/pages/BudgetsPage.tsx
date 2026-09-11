@@ -11,7 +11,8 @@ import { BudgetList } from "@/features/budgets/components/BudgetList";
 import type { BudgetWithSpending } from "@/types/finance";
 import type { BudgetFormData } from "@/features/budgets/schemas";
 import { setDocumentTitle } from "@/utils/documentTitle";
-import { getErrorMessage } from "@/utils/errors";
+import { ApiError, AppStatusCode } from "@/types/http";
+import { ClientLogger, type ClientLogEntry } from "@/utils/clientLogger";
 
 export function BudgetsPage() {
   useEffect(() => {
@@ -26,7 +27,11 @@ export function BudgetsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithSpending | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BudgetWithSpending | null>(null);
-  const [mutationError, setMutationError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [modelErrors, setModelErrors] = useState<Record<
+    string,
+    string[]
+  > | null>(null);
 
   const budgets = response?.data ?? [];
 
@@ -43,20 +48,26 @@ export function BudgetsPage() {
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingBudget(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   function handleCloseDelete() {
     setDeleteTarget(null);
-    setMutationError(null);
+    setErrorDetails(null);
+    setModelErrors(null);
   }
 
   async function handleSubmit(data: BudgetFormData) {
+    setErrorDetails(null);
+    setModelErrors(null);
+
     try {
       if (editingBudget) {
         await updateMutation.mutateAsync({
           id: editingBudget.id,
           data: {
+            categoryId: data.categoryId,
             name: data.name,
             limitAmount: data.limitAmount,
             period: data.period,
@@ -72,7 +83,22 @@ export function BudgetsPage() {
       }
       handleCloseModal();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "[onSubmit]",
+          path: "/budgets",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -82,7 +108,22 @@ export function BudgetsPage() {
       await deleteMutation.mutateAsync(deleteTarget.id);
       handleCloseDelete();
     } catch (error) {
-      setMutationError(getErrorMessage(error));
+      if (error instanceof ApiError) {
+        setErrorDetails(error.detail);
+
+        if (error.modelErrors) {
+          setModelErrors(error.modelErrors);
+        }
+      } else {
+        ClientLogger.LogError({
+          message: "Unexpected error while submitting the request",
+          details: error instanceof Error ? error.message : String(error),
+          context: "From handleConfirmDelete()",
+          path: "/budgets",
+          statusCode: AppStatusCode.ClientError,
+        } as ClientLogEntry);
+        setErrorDetails("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -124,9 +165,9 @@ export function BudgetsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {mutationError && (
+            {errorDetails && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <BudgetForm
@@ -143,6 +184,7 @@ export function BudgetsPage() {
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitLabel={editingBudget ? "Update Budget" : "Create Budget"}
+              modelErrors={modelErrors}
             />
           </div>
         </div>
@@ -155,9 +197,9 @@ export function BudgetsPage() {
             <p className="mt-2 text-sm text-gray-600">
               Are you sure you want to delete "{deleteTarget.name}"?
             </p>
-            {mutationError && (
+            {errorDetails && (
               <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {mutationError}
+                {errorDetails}
               </div>
             )}
             <div className="mt-6 flex gap-3">
