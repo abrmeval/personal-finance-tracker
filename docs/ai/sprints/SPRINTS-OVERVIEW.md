@@ -165,13 +165,14 @@ Users can create budgets per category with period-based (daily/weekly/monthly/ye
 A complete dashboard with financial overview cards and charts. Monthly summaries and category breakdowns available. Background jobs running on schedule.
 
 ### What's Included
-- **Backend:** Reporting module — `ReportingDbContext` (read-only cross-schema views), `IDashboardRepository`, summary query logic
-- **Backend:** Dashboard summary, income-vs-expenses by month, and category breakdown endpoints
-- **Backend:** `AddReportingModule` + `MapReportingEndpoints` registration
-- **Backend:** TickerQ background jobs — `MonthlyReportJob` (1st of month), `BudgetAlertJob` (every 6 hours)
-- **Frontend:** `reportsApi` service, `useDashboardSummary`, `useIncomeVsExpenses`, `useCategoryBreakdown` hooks
-- **Frontend:** `OverviewCards`, `SpendingPieChart`, `IncomeExpenseChart`, `Dashboard` page fully assembled
-- **Frontend:** `getCurrentMonthRange` utility function (`formatCurrency`/`formatDate` already extracted in Sprint 3)
+- **Backend:** Reporting module (new project; references Finance read-only contracts per `docs/01` Allowed References) — `ReportingDbContext` (`reports` schema), `MonthlySummary` entity + migration, `DashboardService`/`ReportingService`
+- **Backend:** Dashboard summary, income-vs-expenses by month, and category breakdown endpoints (all `ApiResponse<T>`-enveloped)
+- **Backend:** `AddReportingModule` + `MapReportingEndpoints` registration (replaces the `TODO Sprint 4` hooks in `Program.cs`)
+- **Backend:** TickerQ 10.4.0 — EF Core operational store (`ticker` schema, migration included); `MonthlyReportJob` (1st of month), `BudgetAlertJob` (every 6 hours)
+- **Backend:** Finance aggregate read contracts on `ITransactionRepository`/`IBudgetRepository` (+ `BudgetService.GetBudgetsNearLimitAsync`); new `Reporting.UnitTests`
+- **Frontend:** `reportsApi` service, `useDashboardSummary`, `useIncomeVsExpenses`, `useCategoryBreakdown` hooks with `dashboardKeys` factory
+- **Frontend:** `OverviewCards`, `SpendingPieChart`, `IncomeExpenseChart` (Recharts), `Dashboard` page at `/` and `ReportsPage` at `/reports` — both placeholders removed
+- **Frontend:** `getCurrentMonthRange` utility (date-fns); transaction/category mutations invalidate dashboard queries
 
 ### Out of Scope
 - Email/push notifications for budget alerts
@@ -247,4 +248,4 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 
 ---
 
-*Last updated: 10/09/2026*
+*Last updated: 11/09/2026*
