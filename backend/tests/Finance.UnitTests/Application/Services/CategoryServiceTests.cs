@@ -47,7 +47,7 @@ public class CategoryServiceTests
         var result = await _categoryService.GetAllAsync(UserId);
 
         Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value);
+        Assert.Empty(result.Value!);
     }
 
     [Fact]

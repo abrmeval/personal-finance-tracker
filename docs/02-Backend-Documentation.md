@@ -1109,88 +1109,149 @@ public class FinanceMetrics
 
 ## 10. TickerQ Background Jobs
 
+The application uses **TickerQ 10.4.0**. Jobs are plain dependency-injected classes with a `[TickerFunction]` method. TickerQ's source generator discovers the methods, and cron expressions are seeded automatically when the scheduler starts. Unlike the earlier design sketch, this version does not use interface-based jobs, chained manual job registration, or a direct PostgreSQL TickerQ option.
+
 ### Scheduled Job for Monthly Reports
 
 ```csharp
 // Modules/Reporting/Jobs/MonthlyReportJob.cs
 
-public class MonthlyReportJob : ITickerJob
+using Microsoft.Extensions.Logging;
+using Personal.FinanceTracker.Reporting.Application.Interfaces;
+using TickerQ.Utilities.Base;
+
+namespace Personal.FinanceTracker.Reporting.Jobs;
+
+public sealed class MonthlyReportJob(
+    IReportingService reportingService,
+    ILogger<MonthlyReportJob> logger)
 {
-    private readonly IReportingService _reportingService;
-    private readonly ILogger<MonthlyReportJob> _logger;
-
-    public MonthlyReportJob(
-        IReportingService reportingService,
-        ILogger<MonthlyReportJob> logger)
-    {
-        _reportingService = reportingService;
-        _logger = logger;
-    }
-
-    [TickerFunction("GenerateMonthlyReports", "0 0 1 * *")] // First day of month at midnight
+    [TickerFunction("generate-monthly-reports", cronExpression: "0 0 1 * *")]
     public async Task ExecuteAsync(CancellationToken ct)
     {
-        _logger.LogInformation("Starting monthly report generation");
+        var now = DateTime.UtcNow;
+        var previousMonth = new DateTime(
+            now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-1);
 
-        var previousMonth = DateTime.UtcNow.AddMonths(-1);
-        
-        await _reportingService.GenerateMonthlyReportsAsync(
-            previousMonth.Year,
-            previousMonth.Month,
-            ct);
+        logger.LogInformation(
+            "MonthlyReportJob starting for {Year}-{Month:00}",
+            previousMonth.Year, previousMonth.Month);
 
-        _logger.LogInformation("Completed monthly report generation");
+        var result = await reportingService.GenerateMonthlyReportsAsync(
+            previousMonth.Year, previousMonth.Month, ct);
+
+        if (result.IsFailure)
+        {
+            logger.LogError(
+                "MonthlyReportJob failed for {Year}-{Month:00}: {Error}",
+                previousMonth.Year, previousMonth.Month, result.Error?.Description);
+            return;
+        }
+
+        logger.LogInformation(
+            "MonthlyReportJob completed: {Count} summaries persisted",
+            result.Value);
     }
 }
 ```
+
+The five-part cron expression runs on the first day of each month at midnight. TickerQ stores it in the operational store's six-field seconds-expanded form (`0 0 0 1 * *`).
 
 ### Budget Alert Job
 
 ```csharp
 // Modules/Finance/Jobs/BudgetAlertJob.cs
 
-public class BudgetAlertJob : ITickerJob
+using Microsoft.Extensions.Logging;
+using Personal.FinanceTracker.Finance.Application.Interfaces;
+using TickerQ.Utilities.Base;
+
+namespace Personal.FinanceTracker.Finance.Jobs;
+
+public sealed class BudgetAlertJob(
+    IBudgetService budgetService,
+    ILogger<BudgetAlertJob> logger)
 {
-    private readonly IBudgetService _budgetService;
-    private readonly INotificationService _notificationService;
+    private const decimal AlertThresholdPercentage = 80m;
 
-    public BudgetAlertJob(
-        IBudgetService budgetService,
-        INotificationService notificationService)
-    {
-        _budgetService = budgetService;
-        _notificationService = notificationService;
-    }
-
-    [TickerFunction("CheckBudgetAlerts", "0 */6 * * *")] // Every 6 hours
+    [TickerFunction("check-budget-alerts", cronExpression: "0 */6 * * *")]
     public async Task ExecuteAsync(CancellationToken ct)
     {
-        var budgetsNearLimit = await _budgetService
-            .GetBudgetsNearLimitAsync(threshold: 80, ct);
+        logger.LogInformation(
+            "BudgetAlertJob starting with threshold {Threshold}%",
+            AlertThresholdPercentage);
 
-        foreach (var budget in budgetsNearLimit)
+        var result = await budgetService.GetBudgetsNearLimitAsync(
+            AlertThresholdPercentage, ct);
+        if (result.IsFailure)
         {
-            await _notificationService.SendBudgetAlertAsync(
+            logger.LogError("BudgetAlertJob failed: {Error}", result.Error?.Description);
+            return;
+        }
+
+        var budgets = result.Value ?? [];
+        foreach (var budget in budgets)
+        {
+            logger.LogWarning(
+                "Budget alert: user {UserId}, budget \"{BudgetName}\" ({CategoryName}) at {Percentage}% of {Period} limit — spent {Spent} of {Limit}",
                 budget.UserId,
                 budget.Name,
+                budget.CategoryName,
                 budget.PercentageUsed,
-                ct);
+                budget.Period,
+                budget.SpentAmount,
+                budget.LimitAmount);
         }
+
+        logger.LogInformation(
+            "BudgetAlertJob completed: {Count} budgets at or above threshold",
+            budgets.Count);
     }
 }
 ```
 
-### TickerQ Registration
+This job only logs alerts. Notification delivery is outside the Sprint 4 scope. Its five-part cron expression is stored as `0 0 */6 * * *`.
+
+### TickerQ Registration and EF Core Operational Store
+
+The EF Core operational store is attached to the existing `ReportingDbContext`. Reporting owns the `reports` schema; TickerQ's tables are placed in the separate `ticker` schema.
 
 ```csharp
 // Program.cs
 
+using Personal.FinanceTracker.Reporting.Infrastructure.Data;
+using TickerQ.DependencyInjection;
+using TickerQ.EntityFrameworkCore.Customizer;
+using TickerQ.EntityFrameworkCore.DependencyInjection;
+
 builder.Services.AddTickerQ(options =>
 {
-    options.UsePostgreSql(builder.Configuration.GetConnectionString("FinanceDb")!);
-})
-.AddJob<MonthlyReportJob>()
-.AddJob<BudgetAlertJob>();
+    options.AddOperationalStore(ef =>
+    {
+        ef.UseApplicationDbContext<ReportingDbContext>(ConfigurationType.UseModelCustomizer);
+        ef.SetSchema("ticker");
+    });
+});
+
+// ... after app = builder.Build() and endpoint mapping
+app.MapReportingEndpoints();
+app.UseTickerQ();
+```
+
+`UseApplicationDbContext<ReportingDbContext>(ConfigurationType.UseModelCustomizer)` adds TickerQ's entity configuration to the application context only for the operational-store model; the application context remains responsible for migrations. The `AddTickerQTables` migration creates `ticker.CronTickers`, `ticker.TimeTickers`, and `ticker.CronTickerOccurrences` alongside the reporting migration set:
+
+```bash
+# From backend/
+dotnet ef migrations add AddTickerQTables \
+  --project src/Modules/Reporting/Personal.FinanceTracker.Reporting.csproj \
+  --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj \
+  --context ReportingDbContext \
+  --output-dir Infrastructure/Data/Migrations
+
+dotnet ef database update \
+  --project src/Modules/Reporting/Personal.FinanceTracker.Reporting.csproj \
+  --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj \
+  --context ReportingDbContext
 ```
 
 ---

@@ -159,7 +159,7 @@ Users can create budgets per category with period-based (daily/weekly/monthly/ye
 
 **Duration:** 1.5 weeks
 **Doc:** [sprint-4.md](./sprint-4.md)
-**Status:** New
+**Status:** Done
 
 ### Goals
 A complete dashboard with financial overview cards and charts. Monthly summaries and category breakdowns available. Background jobs running on schedule.
@@ -167,7 +167,7 @@ A complete dashboard with financial overview cards and charts. Monthly summaries
 ### What's Included
 - **Backend:** Reporting module (new project; references Finance read-only contracts per `docs/01` Allowed References) — `ReportingDbContext` (`reports` schema), `MonthlySummary` entity + migration, `DashboardService`/`ReportingService`
 - **Backend:** Dashboard summary, income-vs-expenses by month, and category breakdown endpoints (all `ApiResponse<T>`-enveloped)
-- **Backend:** `AddReportingModule` + `MapReportingEndpoints` registration (replaces the `TODO Sprint 4` hooks in `Program.cs`)
+- **Backend:** `AddReportingModule` + `MapReportingEndpoints` registration (replaces the original Reporting integration hooks in `Program.cs`)
 - **Backend:** TickerQ 10.4.0 — EF Core operational store (`ticker` schema, migration included); `MonthlyReportJob` (1st of month), `BudgetAlertJob` (every 6 hours)
 - **Backend:** Finance aggregate read contracts on `ITransactionRepository`/`IBudgetRepository` (+ `BudgetService.GetBudgetsNearLimitAsync`); new `Reporting.UnitTests`
 - **Frontend:** `reportsApi` service, `useDashboardSummary`, `useIncomeVsExpenses`, `useCategoryBreakdown` hooks with `dashboardKeys` factory
@@ -241,11 +241,11 @@ Fully automated CI/CD pipeline. Production environment live on Azure with observ
 | `net8.0` vs `net10.0` mismatch in `Directory.Build.props` | Resolved in Sprint 0 Task 1 |
 | Empty `.sln` — projects not registered | Resolved in Sprint 0 Task 2 |
 | No `@/` path alias in `vite.config.ts` | Resolved in Sprint 0 Task 8 |
-| TickerQ requires PostgreSQL backing store — needs migration | Handled in Sprint 4 |
+| ~~TickerQ requires PostgreSQL backing store — needs migration~~ | Resolved in Sprint 4: EF Core operational-store migration applied and both cron tickers seeded |
 | Neon PostgreSQL provisioning depends on Sprint 6 | Sprints 1–5 use local PostgreSQL via Docker/TestContainers |
 | JWT tokens + full user object persisted in `localStorage` (audit C-1, CRITICAL — violates AGENTS.md security rules) | Deferred by owner decision to a dedicated auth-hardening task before production; refresh tokens must move to HttpOnly cookies and the access token to memory |
 | `TreatWarningsAsErrors` commented out in `Directory.Build.props`; 6 pre-existing warnings in test projects | Fix warnings and re-enable, or update AGENTS.md to match reality — resolve alongside Sprint 3+ work |
 
 ---
 
-*Last updated: 11/09/2026*
+*Last updated: 23/09/2026*

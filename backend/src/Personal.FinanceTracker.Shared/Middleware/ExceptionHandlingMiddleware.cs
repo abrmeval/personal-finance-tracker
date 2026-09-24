@@ -7,7 +7,7 @@ using Personal.FinanceTracker.Shared.Models;
 namespace Personal.FinanceTracker.Shared.Middleware;
 
 /// <summary>
-/// Middleware for handling exceptions globally in the application. It catches unhandled exceptions, logs them, and returns appropriate HTTP responses based on the type of exception. 
+/// Middleware for handling exceptions globally in the application. It catches unhandled exceptions, logs them, and returns appropriate HTTP responses based on the type of exception.
 /// This ensures that clients receive consistent error responses and that server errors are properly logged for troubleshooting.
 /// </summary>
 /// <param name="next">The next middleware in the pipeline.</param>
@@ -29,12 +29,28 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
 
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, title) = exception switch
+        var (statusCode, title, codeText) = exception switch
         {
-            NotFoundException => (StatusCodes.Status404NotFound, "The requested resource was not found."),
-            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Not authorized to access this resource."),
-            FluentValidation.ValidationException => (StatusCodes.Status400BadRequest, "The request is invalid."),
-            _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred while processing the request.")
+            BadHttpRequestException => (
+                StatusCodes.Status400BadRequest,
+                "Invalid Report Parameters",
+                "BAD_REQUEST"),
+            NotFoundException => (
+                StatusCodes.Status404NotFound,
+                "The requested resource was not found.",
+                "NOT_FOUND"),
+            UnauthorizedAccessException => (
+                StatusCodes.Status401Unauthorized,
+                "Not authorized to access this resource.",
+                "UNAUTHORIZED."),
+            FluentValidation.ValidationException => (
+                StatusCodes.Status400BadRequest,
+                "The request is invalid.",
+                "BAD_REQUEST"),
+            _ => (
+                StatusCodes.Status500InternalServerError,
+                "An unexpected error occurred while processing the request.",
+                "INTERNAL_SERVER_ERROR.")
         };
 
         var apiError = new ApiError
@@ -53,7 +69,7 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
             IsOk = false,
             Error = apiError,
             StatusCode = statusCode,
-            CodeText = title
+            CodeText = codeText
         });
     }
 }

@@ -20,22 +20,24 @@ The backend is an ASP.NET 10 Minimal API solution targeting .NET 10. Dependencie
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.8 | Api | JWT bearer authentication middleware | Validates JWT access tokens on protected endpoints; integrates with the authorization pipeline |
 | `Microsoft.AspNetCore.OpenApi` + `Microsoft.OpenApi` | 10.0.8 / 2.7.5 | Api | OpenAPI document generation for Minimal APIs | Generates the OpenAPI spec served in Development |
 | `Scalar.AspNetCore` | 2.14.14 | Api | Interactive API reference UI | Serves the Scalar UI at `/scalar` (Development only) — this project does **not** use Swashbuckle/Swagger |
-| `Microsoft.EntityFrameworkCore` | 10.0.8 | Api, Users, Finance | .NET ORM for strongly-typed database access | Core ORM across all modules via the repository pattern |
-| `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.1 | Api, Users, Finance | EF Core provider for PostgreSQL | Connects the module DbContexts to PostgreSQL (local Docker today; Neon in production); `EnableRetryOnFailure` configured per module |
+| `Microsoft.EntityFrameworkCore` | 10.0.8 | Api, Users, Finance, Reporting | .NET ORM for strongly-typed database access | Core ORM across all modules via the repository pattern |
+| `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.1 | Api, Users, Finance, Reporting | EF Core provider for PostgreSQL | Connects the module DbContexts to PostgreSQL (local Docker today; Neon in production); `EnableRetryOnFailure` configured per module |
 | `FluentValidation` | 12.1.1 | Shared, Users, Finance, Api | Fluent validation rules for .NET objects | Validates request DTOs via `AbstractValidator<T>`; executed by the `ValidationFilter<T>` endpoint filter |
 | `FluentValidation.DependencyInjectionExtensions` | 12.1.1 | Users, Finance | DI registration helpers for FluentValidation | Enables `services.AddValidatorsFromAssemblyContaining<T>()` automatic validator discovery |
 | `BCrypt.Net-Next` | 4.2.0 | Users | BCrypt password hashing | Hashes passwords on register and verifies them on login (`UserService`) |
 | `System.IdentityModel.Tokens.Jwt` + `Microsoft.IdentityModel.Tokens` | 8.18.0 | Users | JWT creation and validation primitives | Generates and reads JWTs in `TokenService` (access tokens, refresh token claims) |
 | `AspNetCore.HealthChecks.NpgSql` | 9.0.0 | Api | PostgreSQL health check for ASP.NET Core | **Referenced — not yet wired.** `/health/live` and `/health/ready` currently register no DB check |
 | `OpenTelemetry.Extensions.Hosting` / `.Exporter.OpenTelemetryProtocol` / `.Instrumentation.AspNetCore` / `.Instrumentation.Http` | 1.15.x | Api | Traces, metrics, and logs with OTLP export | **Referenced — wiring planned (Sprint 6)** |
+| `TickerQ` | 10.4.0 | Api, Finance, Reporting | Source-generated background job scheduler | Runs the monthly report and six-hour budget alert jobs |
+| `TickerQ.EntityFrameworkCore` | 10.4.0 | Api | EF Core operational store for TickerQ | Persists scheduler state in the `ticker` schema through `ReportingDbContext` |
 
 ### Design-Time Dependencies
 
 | Package | Version | Project(s) | General Purpose | Role in Project |
 |---------|---------|------------|-----------------|-----------------|
-| `Microsoft.EntityFrameworkCore.Design` | 10.0.8 | Api, Users, Finance | EF Core design-time tooling (scaffolding, migrations) | Required by `dotnet ef migrations add` and `dotnet ef database update`; excluded from the published output |
+| `Microsoft.EntityFrameworkCore.Design` | 10.0.8 | Api, Users, Finance, Reporting | EF Core design-time tooling (scaffolding, migrations) | Required by `dotnet ef migrations add` and `dotnet ef database update`; excluded from the published output |
 
-### Test Dependencies (Finance.UnitTests and Users.UnitTests)
+### Test Dependencies (Finance.UnitTests, Users.UnitTests, and Reporting.UnitTests)
 
 | Package | Version | General Purpose | Role in Project |
 |---------|---------|----------------|-----------------|
@@ -43,6 +45,8 @@ The backend is an ASP.NET 10 Minimal API solution targeting .NET 10. Dependencie
 | `xunit` + `xunit.runner.visualstudio` | 2.9.3 / 3.1.0 | Unit testing framework | Test framework for domain/application unit tests |
 | `NSubstitute` | 5.3.0 | Mocking library | Mocks repositories, token services, and loggers in service tests (`Substitute.For<T>()`) |
 | `FluentAssertions` | 8.2.0 | Fluent assertion library | Assertion syntax in all tests (global `using FluentAssertions;` in `Usings.cs`) |
+
+`Reporting.UnitTests` references `Personal.FinanceTracker.Reporting` and covers reporting services, monthly summaries, and date normalization without database or scheduler I/O.
 
 Integration tests with TestContainers are planned (Sprint 5) — no packages for them are installed yet.
 
@@ -65,6 +69,8 @@ The frontend is a React + Vite + TypeScript application. Dependencies are declar
 | `lucide-react` | 1.16.0 | SVG icon library | Supplies all icons in the UI — the only icon library used |
 | `clsx` + `tailwind-merge` | 2.1.1 / 3.6.0 | Conditional class composition | Composes conditional Tailwind class names without conflicts |
 | `dotenv-cli` | 11.0.0 | Injects `.env` variables into commands | Loads `VITE_API_URL` / `VITE_ENVIRONMENT` in the `dev` and `build` npm scripts |
+| `recharts` | 3.8.1 | React chart components | Renders the dashboard income/expense line chart and category spending donut chart |
+| `date-fns` | 4.1.0 | Date arithmetic and formatting | Builds month ranges and chart labels for the dashboard and reports page |
 
 **HTTP client:** the app uses the native-fetch `apiClient` in `src/api/client.ts` (bearer token, 401 → refresh → retry, logout redirect) — there is no HTTP library dependency.
 
@@ -83,8 +89,6 @@ The frontend is a React + Vite + TypeScript application. Dependencies are declar
 
 | Package | Version | Planned use |
 |---------|---------|-------------|
-| `recharts` | 3.8.1 | Dashboard/reporting charts (Sprint 4) — no chart code exists yet |
-| `date-fns` | 4.1.0 | Date ranges and formatting in reporting (Sprint 4) — current formatting uses native `Intl` in `src/utils/formatters.ts` |
 | `vitest` | 4.1.6 | Frontend test runner (Sprint 5) — no test scripts or config exist yet |
 | `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom` | 16.3.2 / 14.6.1 / 6.9.1 | Component testing (Sprint 5) |
 | `msw` | 2.14.6 | API mocking for tests (Sprint 5) |
@@ -105,4 +109,4 @@ The frontend is a React + Vite + TypeScript application. Dependencies are declar
 
 ---
 
-*Last Updated: 09 Sep 2026*
+*Last Updated: 23 Sep 2026*

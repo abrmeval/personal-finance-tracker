@@ -6,6 +6,10 @@ namespace Personal.FinanceTracker.Finance.Application.Interfaces;
 
 public interface IBudgetService
 {
+    Task<Result<IReadOnlyList<BudgetWithSpendingResponse>>> GetBudgetsNearLimitAsync(
+        decimal thresholdPercentage,
+        CancellationToken ct = default);
+
     Task<Result<IReadOnlyList<BudgetWithSpendingResponse>>> GetAllAsync(Guid userId, CancellationToken ct = default);
     Task<Result<BudgetWithSpendingResponse>> GetByIdAsync(Guid userId, Guid id, CancellationToken ct = default);
     Task<Result<BudgetWithSpendingResponse>> CreateAsync(Guid userId, CreateBudgetRequest request, CancellationToken ct = default);

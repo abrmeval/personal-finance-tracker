@@ -1,9 +1,15 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Personal.FinanceTracker.Finance;
+using Personal.FinanceTracker.Reporting;
+using Personal.FinanceTracker.Reporting.Api.Endpoints;
+using Personal.FinanceTracker.Reporting.Infrastructure.Data;
 using Personal.FinanceTracker.Shared.Middleware;
 using Personal.FinanceTracker.Users;
 using Scalar.AspNetCore;
+using TickerQ.DependencyInjection;
+using TickerQ.EntityFrameworkCore.DependencyInjection;
+using TickerQ.EntityFrameworkCore.Customizer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +57,16 @@ builder.Services.AddHealthChecks();
 
 builder.Services.AddUsersModule(builder.Configuration);
 builder.Services.AddFinanceModule(builder.Configuration);
-// TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
+builder.Services.AddReportingModule(builder.Configuration);
+
+builder.Services.AddTickerQ(options =>
+{
+    options.AddOperationalStore(ef =>
+    {
+        ef.UseApplicationDbContext<ReportingDbContext>(ConfigurationType.UseModelCustomizer);
+        ef.SetSchema("ticker");
+    });
+});
 
 // TODO Sprint 6: builder.Services.AddOpenTelemetry(...)
 
@@ -83,7 +98,7 @@ app.MapHealthChecks("/health/ready");
 
 app.MapUsersEndpoints();
 app.MapFinanceEndpoints();
-
-// TODO Sprint 4: app.MapReportingEndpoints();
+app.MapReportingEndpoints();
+app.UseTickerQ();
 
 app.Run();

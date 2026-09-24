@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { categoriesApi } from '@/api/categories';
+import { dashboardKeys } from '@/features/dashboard/hooks/useDashboard';
 import type { CreateCategoryRequest, UpdateCategoryRequest } from '@/types/finance';
 
 export const categoryKeys = {
@@ -34,6 +35,7 @@ export function useUpdateCategory() {
       categoriesApi.update(id, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }
@@ -44,6 +46,7 @@ export function useDeleteCategory() {
     mutationFn: (id: string) => categoriesApi.delete(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: categoryKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
     },
   });
 }

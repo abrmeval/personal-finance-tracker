@@ -16,6 +16,47 @@ public sealed class BudgetService(
     ITransactionRepository transactionRepository,
     ILogger<BudgetService> logger) : IBudgetService
 {
+    public async Task<Result<IReadOnlyList<BudgetWithSpendingResponse>>> GetBudgetsNearLimitAsync(
+        decimal thresholdPercentage,
+        CancellationToken ct = default)
+    {
+        if (thresholdPercentage is < 0 or > 100)
+        {
+            return Result<IReadOnlyList<BudgetWithSpendingResponse>>.Failure(new(
+                ApiErrorCode.InvalidReportParameters, "Threshold percentage must be between 0 and 100."));
+        }
+
+        var budgets = await budgetRepository.GetAllActiveAsync(ct);
+        if (budgets.Count == 0)
+            return Result<IReadOnlyList<BudgetWithSpendingResponse>>.Success([]);
+
+        var categoryNamesByUser = new Dictionary<Guid, Dictionary<Guid, string>>();
+        foreach (var ownerUserId in budgets.Select(b => b.UserId).Distinct())
+        {
+            categoryNamesByUser[ownerUserId] = (await categoryRepository.GetAllByUserAsync(ownerUserId, ct))
+                .ToDictionary(c => c.Id, c => c.Name);
+        }
+
+        var results = new List<BudgetWithSpendingResponse>();
+        foreach (var budget in budgets)
+        {
+            var spent = await GetSpendingForPeriodAsync(budget.UserId, budget.CategoryId, budget.Period, ct);
+            var response = MapToWithSpending(
+                budget,
+                categoryNamesByUser[budget.UserId].GetValueOrDefault(budget.CategoryId, "Unknown"),
+                spent);
+
+            if (response.PercentageUsed >= thresholdPercentage)
+                results.Add(response);
+        }
+
+        logger.LogInformation(
+            "Budget alert scan: {AlertCount}/{BudgetCount} budgets at or above {Threshold}% usage",
+            results.Count, budgets.Count, thresholdPercentage);
+
+        return Result<IReadOnlyList<BudgetWithSpendingResponse>>.Success(results);
+    }
+
     public async Task<Result<IReadOnlyList<BudgetWithSpendingResponse>>> GetAllAsync(Guid userId, CancellationToken ct = default)
     {
         var budgets = await budgetRepository.GetAllByUserAsync(userId, ct);
@@ -161,6 +202,7 @@ public sealed class BudgetService(
 
         return new BudgetWithSpendingResponse(
             Id: budget.Id,
+            UserId: budget.UserId,
             CategoryId: budget.CategoryId,
             CategoryName: categoryName,
             Name: budget.Name,
