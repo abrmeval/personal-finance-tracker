@@ -21,11 +21,14 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.14.14" />
+    <PackageReference Include="TickerQ" Version="10.4.0" />
+    <PackageReference Include="TickerQ.EntityFrameworkCore" Version="10.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Personal.FinanceTracker.Shared\Personal.FinanceTracker.Shared.csproj" />
     <ProjectReference Include="..\Modules\Users\Personal.FinanceTracker.Users.csproj" />
     <ProjectReference Include="..\Modules\Finance\Personal.FinanceTracker.Finance.csproj" />
+    <ProjectReference Include="..\Modules\Reporting\Personal.FinanceTracker.Reporting.csproj" />
   </ItemGroup>
 </Project>

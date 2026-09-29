@@ -52,7 +52,7 @@ public class UserServiceTests
         var result = await _userService.RegisterAsync(request);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("fake-access-token", result.Value.AccessToken);
+        Assert.Equal("fake-access-token", result.Value!.AccessToken);
         Assert.Equal("fake-refresh-token", result.Value.RefreshToken);
         Assert.Equal(15 * 60, result.Value.ExpiresIn);
         Assert.Equal("test@example.com", result.Value.User.Email);
@@ -107,7 +107,7 @@ public class UserServiceTests
         var result = await _userService.LoginAsync(request);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("fake-access-token", result.Value.AccessToken);
+        Assert.Equal("fake-access-token", result.Value!.AccessToken);
         Assert.Equal("fake-refresh-token", result.Value.RefreshToken);
         Assert.Equal("test@example.com", result.Value.User.Email);
 
@@ -167,7 +167,7 @@ public class UserServiceTests
         var result = await _userService.RefreshTokenAsync("valid-token");
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("fake-access-token", result.Value.AccessToken);
+        Assert.Equal("fake-access-token", result.Value!.AccessToken);
         Assert.Equal("fake-refresh-token", result.Value.RefreshToken);
         Assert.True(token.IsRevoked);
 

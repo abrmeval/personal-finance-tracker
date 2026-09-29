@@ -7,7 +7,7 @@ Guidance for agentic coding agents operating in this repository. When unsure abo
 ## Project Overview
 
 Full-stack personal finance app (monorepo):
-- **Backend** — ASP.NET 10 modular monolith (`backend/`, solution `Personal.FinanceTracker.slnx`). Modules **Users** (JWT auth: register, login, refresh, revoke) and **Finance** (transactions, categories, budgets) are implemented; **Reporting** is planned (Sprint 4).
+- **Backend** — ASP.NET 10 modular monolith (`backend/`, solution `Personal.FinanceTracker.slnx`). Modules **Users** (JWT auth: register, login, refresh, revoke) and **Finance** (transactions, categories, budgets) are implemented; **Reporting** (dashboard, reports endpoints, monthly summaries, TickerQ jobs) is implemented; check `docs/ai/sprints/SPRINTS-OVERVIEW.md` for current status.
 - **Frontend** — React 19 + Vite 7 + TypeScript (`frontend/`), feature-based structure, TanStack Query for server state.
 - **Database** — PostgreSQL; local via Docker Compose (`infrastructure/`), Neon is the production target (Sprint 6).
 - Work is sprint-driven — check `docs/ai/sprints/SPRINTS-OVERVIEW.md` for current status before planning changes.
@@ -22,6 +22,8 @@ Full-stack personal finance app (monorepo):
 ---
 
 ## Commands
+
+> **Agent shell note (WSL2):** the agent bash runs under WSL2 while the .NET and Node toolchains are the Windows installs. Use `dotnet.exe` instead of `dotnet` (e.g. `dotnet.exe build backend/Personal.FinanceTracker.slnx`); run every npm script via `cmd.exe /c` from the target folder (e.g. `cd frontend && cmd.exe /c "npm run build"` — `node_modules` holds win32 binaries, so WSL `npm` fails on esbuild). `docker` (Docker Desktop) and `cmd.exe` resolve via PATH.
 
 ### Frontend (`frontend/`)
 
@@ -245,7 +247,7 @@ group.MapPost("/", CreateAsync).AddEndpointFilter<ValidationFilter<CreateBudgetR
   - Body must contain `# Summary:` (2-3 sentences) before `# Key Changes:` (bullet list).
 - **Dev CI** (`dev.yml`, on push/PR to `main`): backend restore + Release build + unit tests (`dotnet test`, TRX results uploaded on failure) + `dotnet format --verify-no-changes --severity warn`; frontend `npm ci` + lint + build. Node 20 / .NET 10.
 - Commenting `/oc` or `/opencode` on an issue/PR triggers an automated code-reviewer agent run.
-- Sprint status values: `New` | `In Progress` | `Done` — update in both the sprint file header and `SPRINTS-OVERVIEW.md` when status changes. The `designer-enforcer` agent must run at the end of every sprint before marking it Done.
+- Sprint status values: `New` | `In Progress` | `Done` — update in both the sprint file header and `SPRINTS-OVERVIEW.md` when status changes. The `auditor` agent must run at the end of every sprint before marking it Done.
 
 ---
 

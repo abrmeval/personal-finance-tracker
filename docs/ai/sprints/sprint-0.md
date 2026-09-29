@@ -377,7 +377,7 @@ Replace the 7-line Hello World `Program.cs` with a production-ready pipeline tha
 
    // TODO Sprint 1: builder.Services.AddUsersModule(builder.Configuration);
    // TODO Sprint 2: builder.Services.AddFinanceModule(builder.Configuration);
-   // TODO Sprint 4: builder.Services.AddReportingModule(builder.Configuration);
+   // Reporting module registration is wired in Sprint 4.
 
    // ── Pipeline ───────────────────────────────────────────────────
    var app = builder.Build();
@@ -400,7 +400,7 @@ Replace the 7-line Hello World `Program.cs` with a production-ready pipeline tha
 
    // TODO Sprint 1: app.MapUsersEndpoints();
    // TODO Sprint 2: app.MapFinanceEndpoints();
-   // TODO Sprint 4: app.MapReportingEndpoints();
+   // Reporting endpoints are mapped in Sprint 4.
 
    app.Run();
    ```
@@ -662,11 +662,11 @@ Replace the bare `main.tsx` and default `App.tsx` counter demo with a proper pro
      {
        element: <MainLayout />,
        children: [
-         { index: true, element: <div className="text-gray-500">Dashboard — coming in Sprint 4</div> },
+         { index: true, element: <div className="text-gray-500">Dashboard</div> },
          { path: 'transactions', element: <div className="text-gray-500">Transactions — coming in Sprint 2</div> },
          { path: 'categories',   element: <div className="text-gray-500">Categories — coming in Sprint 2</div> },
          { path: 'budgets',      element: <div className="text-gray-500">Budgets — coming in Sprint 3</div> },
-         { path: 'reports',      element: <div className="text-gray-500">Reports — coming in Sprint 4</div> },
+         { path: 'reports',      element: <div className="text-gray-500">Reports</div> },
          { path: '*',            element: <NotFoundPage /> },
        ],
      },

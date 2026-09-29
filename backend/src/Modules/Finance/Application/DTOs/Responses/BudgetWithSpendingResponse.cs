@@ -4,6 +4,7 @@ namespace Personal.FinanceTracker.Finance.Application.DTOs.Responses;
 
 public sealed record BudgetWithSpendingResponse(
     Guid Id,
+    Guid UserId,
     Guid CategoryId,
     string CategoryName,
     string Name,

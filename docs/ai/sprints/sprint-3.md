@@ -81,7 +81,7 @@ Still missing (Sprint 5 scope): `CreateBudgetValidatorTests` and `BudgetServiceT
 
 The cleanup items listed in earlier revisions of this document are **already resolved** — no pre-sprint cleanup task is required:
 
-1. ~~Duplicate `UsersDbContext` DI registration in `Program.cs`~~ — resolved during Sprint 2 closure. `Program.cs` is clean; only intentional `TODO Sprint 4` / `TODO Sprint 6` placeholders remain.
+1. ~~Duplicate `UsersDbContext` DI registration in `Program.cs`~~ — resolved during Sprint 2 closure. `Program.cs` is clean; only the intentional `TODO Sprint 6` placeholder remains.
 2. ~~`AuthEnpoints.cs` filename typo~~ — file is correctly named `AuthEndpoints.cs`.
 3. **`ITransactionRepository.GetTotalExpensesByCategoryAsync` already exists** — added during Sprint 2 (`Domain/Interfaces/ITransactionRepository.cs`, implemented in `TransactionRepository.cs`) with a doc comment referencing this sprint. No repository work is needed for spending calculation.
 

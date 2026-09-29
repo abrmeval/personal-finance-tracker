@@ -2,7 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { NotFoundPage } from "@/pages/NotFoundPage";
-import { PlaceholderPage } from "@/pages/PlaceholderPage";
+import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
+import { ReportsPage } from "@/features/reports/pages/ReportsPage";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { TransactionsPage } from "@/features/transactions/pages/TransactionsPage";
@@ -26,12 +27,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: (
-              <PlaceholderPage
-                title="Dashboard"
-                message="Dashboard — coming in Sprint 4"
-              />
-            ),
+            element: <DashboardPage />,
           },
           {
             path: "transactions",
@@ -47,12 +43,7 @@ const router = createBrowserRouter([
           },
           {
             path: "reports",
-            element: (
-              <PlaceholderPage
-                title="Reports"
-                message="Reports — coming in Sprint 4"
-              />
-            ),
+            element: <ReportsPage />,
           },
           { path: "*", element: <NotFoundPage /> },
         ],

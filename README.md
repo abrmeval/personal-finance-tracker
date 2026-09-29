@@ -36,7 +36,7 @@ The application is built sprint by sprint (plans in [`docs/ai/sprints/`](docs/ai
 | Users module — JWT auth (register, login, refresh, revoke) | Done |
 | Finance module — transactions & categories (CRUD, filters, pagination) | Done |
 | Finance module — budgets (period budgets, spending progress) | Implemented |
-| Reporting module — dashboard, charts, background jobs (TickerQ) | Planned (Sprint 4) |
+| Reporting module — dashboard, charts, background jobs (TickerQ) | Done |
 | Test suite — integration tests, frontend tests | Planned (Sprint 5) |
 | DevOps — CD pipelines, Azure deployment, observability wiring | Planned (Sprint 6) |
 
@@ -52,11 +52,11 @@ The application is built sprint by sprint (plans in [`docs/ai/sprints/`](docs/ai
 - **Budget Planning** — Set per-category budgets with period-based (daily/weekly/monthly/yearly) spending tracking
 - **Protected Routes** — Client-side route guarding with automatic token refresh on 401 responses
 - **Responsive Design** — Mobile-first UI with Tailwind CSS v4
+- **Dashboard & Reports** — Overview cards, category spending, and income-versus-expenses charts
+- **Background Jobs** — Monthly summary generation and budget alert scans via TickerQ
 
 ### Roadmap
 
-- **Dashboard & Reports** — Overview cards, spending charts, monthly summaries (Sprint 4)
-- **Background Jobs** — Budget alerts and monthly report generation via TickerQ (Sprint 4)
 - **Production Deployment** — Azure hosting, Neon PostgreSQL, OpenTelemetry OTLP export (Sprint 6)
 
 ---
@@ -70,7 +70,7 @@ This project follows a **Modular Monolith** architecture — module isolation an
 │                 Personal Finance Tracker API                  │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
 │   │   Finance    │  │    Users     │  │    Reporting     │   │
-│   │   Module ✓   │  │   Module ✓   │  │    (planned)     │   │
+│   │   Module ✓   │  │   Module ✓   │  │    Module ✓      │   │
 │   └──────┬───────┘  └──────┬───────┘  └───────┬──────────┘   │
 │          │                 │                   │              │
 │   ┌──────▼─────────────────▼───────────────────▼──────────┐   │
@@ -83,8 +83,8 @@ This project follows a **Modular Monolith** architecture — module isolation an
 ┌──────────────────────────────────────────────────────────────┐
 │                       PostgreSQL                              │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│   │  finances.*  │  │   users.*    │  │  reporting.*     │   │
-│   │      ✓       │  │      ✓       │  │    (planned)     │   │
+│   │  finances.*  │  │   users.*    │  │    reports.*     │   │
+│   │      ✓       │  │      ✓       │  │       ✓          │   │
 │   └──────────────┘  └──────────────┘  └──────────────────┘   │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -120,7 +120,7 @@ Modules register themselves via `AddXxxModule(...)` / `MapXxxEndpoints(...)` in 
 | AspNetCore.HealthChecks.NpgSql | 9.0 | Referenced; DB readiness check not yet wired |
 | xUnit | — | Unit tests (`Finance.UnitTests`, `Users.UnitTests`) |
 
-**Planned:** OpenTelemetry (packages installed, OTLP wiring in Sprint 6), TickerQ background jobs (Sprint 4), TestContainers integration tests (Sprint 5).
+**Planned:** OpenTelemetry (packages installed, OTLP wiring in Sprint 6), TestContainers integration tests (Sprint 5).
 
 ### Frontend
 
@@ -198,7 +198,7 @@ Match the connection string values to `infrastructure/.env`. Never commit this f
 
 ### 3. Apply database migrations
 
-There are two `DbContext`s (one per module) — both must be updated. Run from `backend/`:
+There are three module `DbContext`s — all must be updated. Run from `backend/`:
 
 ```bash
 cd backend
@@ -206,6 +206,8 @@ cd backend
 dotnet ef database update --project src/Modules/Users/Personal.FinanceTracker.Users.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context UsersDbContext
 
 dotnet ef database update --project src/Modules/Finance/Personal.FinanceTracker.Finance.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context FinanceDbContext
+
+dotnet ef database update --project src/Modules/Reporting/Personal.FinanceTracker.Reporting.csproj --startup-project src/Personal.FinanceTracker.Api/Personal.FinanceTracker.Api.csproj --context ReportingDbContext
 ```
 
 ### 4. Build and run the API
@@ -262,21 +264,23 @@ personal-finance-tracker/
 │   │       │   ├── Infrastructure/            # EF Core (users.* schema), repos, JWT services
 │   │       │   ├── Api/Endpoints/             # AuthEndpoints
 │   │       │   └── DependencyInjection.cs     # AddUsersModule / MapUsersEndpoints
-│   │       └── Finance/                       # Transactions, Categories, Budgets (finances.* schema)
-│   │           └── (same layer layout as Users)
+│   │       ├── Finance/                       # Transactions, Categories, Budgets (finances.* schema)
+│   │       │   └── (same layer layout as Users)
+│   │       └── Reporting/                     # Dashboard, reports, monthly summaries (reports.* schema)
 │   │
 │   └── tests/
 │       ├── Finance.UnitTests/                 # xUnit — domain/application logic
+│       ├── Reporting.UnitTests/               # xUnit — dashboard/reporting logic
 │       └── Users.UnitTests/                   # xUnit — domain/application logic
 │
 ├── frontend/
 │   ├── .env.example                           # VITE_API_URL, VITE_ENVIRONMENT
 │   └── src/
-│       ├── api/                               # Fetch-based client + auth/budgets/categories/transactions modules
+│       ├── api/                               # Fetch-based client + auth/reports/budgets/categories/transactions modules
 │       ├── components/                        # Shared UI (auth/ — AuthProvider, layout/ — Header/Sidebar/MainLayout)
-│       ├── features/                          # auth/, transactions/, categories/, budgets/
+│       ├── features/                          # auth/, dashboard/, reports/, transactions/, categories/, budgets/
 │       ├── hooks/                             # Custom React hooks
-│       ├── pages/                             # NotFoundPage, PlaceholderPage
+│       ├── pages/                             # NotFoundPage
 │       ├── routes/                            # createBrowserRouter route definitions
 │       ├── types/                             # TypeScript types mirroring backend DTOs
 │       └── utils/                             # clientLogger, documentTitle
@@ -388,7 +392,7 @@ Alternative: `python run.py` opens both apps in terminal tabs.
 ## Troubleshooting
 
 - **Frontend scripts fail with an env-file error:** `npm run dev` and `npm run build` load `.env` via dotenv-cli — copy `.env.example` to `.env` first.
-- **Migration applied to one module only:** there are two `DbContext`s (`UsersDbContext`, `FinanceDbContext`) — run `dotnet ef database update` for both (see [EF Core Migrations](#ef-core-migrations)).
+- **Migration applied to one module only:** there are three module `DbContext`s (`UsersDbContext`, `FinanceDbContext`, `ReportingDbContext`) — run `dotnet ef database update` for all three (see [EF Core Migrations](#ef-core-migrations)).
 - **API reference returns 404:** the Scalar UI is served only in the Development environment at `http://localhost:5194/scalar`.
 - **Cannot connect to PostgreSQL:** ensure the container is running (`docker compose up -d` from `infrastructure/`) and that `appsettings.Local.json` connection values match `infrastructure/.env`.
 

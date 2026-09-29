@@ -2149,7 +2149,7 @@ Update `src/routes/index.tsx` to add the public `/login` and `/register` routes,
            children: [
              {
                index: true,
-               element: <div className="text-gray-500">Dashboard — coming in Sprint 4</div>,
+               element: <div className="text-gray-500">Dashboard</div>,
              },
              {
                path: 'transactions',
@@ -2165,7 +2165,7 @@ Update `src/routes/index.tsx` to add the public `/login` and `/register` routes,
              },
              {
                path: 'reports',
-               element: <div className="text-gray-500">Reports — coming in Sprint 4</div>,
+               element: <div className="text-gray-500">Reports</div>,
              },
              { path: '*', element: <NotFoundPage /> },
            ],

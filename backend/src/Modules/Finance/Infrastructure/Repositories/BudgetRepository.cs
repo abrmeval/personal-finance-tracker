@@ -7,6 +7,12 @@ namespace Personal.FinanceTracker.Finance.Infrastructure.Repositories;
 
 public sealed class BudgetRepository(FinanceDbContext context) : IBudgetRepository
 {
+    public async Task<IReadOnlyList<Budget>> GetAllActiveAsync(CancellationToken ct = default)
+        => await context.Budgets
+            .Where(b => b.IsActive)
+            .OrderBy(b => b.Name)
+            .ToListAsync(ct);
+
     public async Task<IReadOnlyList<Budget>> GetAllByUserAsync(Guid userId, CancellationToken ct = default)
         => await context.Budgets
             .Where(b => b.UserId == userId && b.IsActive)

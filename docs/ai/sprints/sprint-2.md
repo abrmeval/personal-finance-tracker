@@ -3494,7 +3494,7 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
                index: true,
                element: (
                  <div className="text-gray-500">
-                   Dashboard — coming in Sprint 4
+                   Dashboard
                  </div>
                ),
              },
@@ -3515,7 +3515,7 @@ Replace the placeholder `<div>` elements for `/transactions` and `/categories` r
              {
                path: "reports",
                element: (
-                 <div className="text-gray-500">Reports — coming in Sprint 4</div>
+                 <div className="text-gray-500">Reports</div>
                ),
              },
              { path: "*", element: <NotFoundPage /> },

@@ -225,6 +225,6 @@ Follow these rules on every frontend file without exception:
 </documentation>
 
 <acknowledge_role>
-After reading this role definition, you MUST to respond with: "I  acknowledge that I have assumed {role_name} role and I am ready to work on the project with the established context."
+After reading this role definition, you MUST respond with: "I acknowledge that I have assumed the {role_name} role and I am ready to work on the project with the established context."
 </acknowledge_role>
 </role>
